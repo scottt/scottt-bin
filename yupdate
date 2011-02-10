@@ -1,0 +1,4 @@
+#!/bin/sh
+# --obsoletes
+sudo sh -c 'yum -y update --skip-broken '"$*"' && yum -C -y list all > '"$HOME/ylist"
+#sudo sh -c 'yum -y update '"$*"' && yum -y list all > '"$HOME/ylist"

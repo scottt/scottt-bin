@@ -1,0 +1,44 @@
+#!/usr/bin/env python
+
+import sys
+import os
+import subprocess
+
+def run_cmd(cmd_list):
+    r = subprocess.call(cmd_list)
+    if r != 0:
+        raise Exception('%s returned %d' % (cmd_list, r))
+
+def fedora_release():
+    return open('/etc/fedora-release').read().strip().split()[3]
+
+def uname_processor():
+    s = subprocess.Popen(['uname', '-p'], stdout=subprocess.PIPE)
+    return s.stdout.read().strip()
+
+def sudo_sync_and_update():
+    script_template = r'''
+cd /var/ftp
+./sync_fedora_repositories --release-ver=%(release_ver)s --base-arch=%(base_arch)s
+[ "$?" != 0 ] && exit 3
+yum -y update --obsoletes --skip-broken
+[ "$?" != 0 ]  && exit 4
+yum -y list all > %(home_dir)s/ylist.new
+[ "$?" != 0 ]  && exit 5
+diff -u %(home_dir)s/ylist %(home_dir)s/ylist.new > /var/log/yum_sync_repositories.log
+# do mv regardless of diff result
+mv -f %(home_dir)s/ylist.new %(home_dir)s/ylist
+'''
+    script = script_template.strip() % dict(
+        release_ver=fedora_release(),
+        base_arch=uname_processor(),
+        home_dir=os.path.expanduser('~'),
+    )
+    run_cmd(['sudo', 'sh', '-c', script])
+
+def main(args):
+    assert not args
+    sudo_sync_and_update()
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
