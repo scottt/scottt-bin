@@ -1,2 +1,2 @@
 #!/bin/sh
-sudo yum -y groupinstall "$@"
+sudo yum -y --skip-broken groupinstall "$@"

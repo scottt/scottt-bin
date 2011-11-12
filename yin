@@ -1,2 +1,2 @@
 #!/bin/sh
-sudo yum -y install "$@"
+sudo yum -y --skip-broken install "$@"
