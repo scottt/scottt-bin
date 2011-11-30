@@ -1,0 +1,150 @@
+#!/usr/bin/env pypy
+# -*- coding: utf8 -*-
+# vim: filetype=python
+
+# Convert Python traceback printout to grep's file:line format.
+# This can be used to jump to those source locations with some programmer's editors.
+# For example, with Vim:
+# $ pybacktrace-to-grep TRACEBACK > l
+# $ vim
+# :set grepprg=cat\ l
+# :grep
+# :copen
+
+import sys
+import os
+import optparse
+import itertools
+
+# The '||' at the start of each line in TEST_DATA comes are due to copying from a Vim 'quickfix' session
+# I want to be able handle junk these at the start of the line.
+TEST_DATA = '''|| Traceback (most recent call last):
+    ||   File "/home/scottt/work/gcc/gcc-python-plugin/libcpychecker/__init__.py", line 50, in execute
+    ||     self.show_possible_null_derefs)
+    ||   File "/home/scottt/work/gcc/gcc-python-plugin/libcpychecker/refcounts.py", line 2188, in check_refcounts
+    ||     limits=limits)
+    ||   File "/home/scottt/work/gcc/gcc-python-plugin/libcpychecker/absinterp.py", line 2554, in iter_traces
+    ||     for trace in iter_traces(fun, facets, newprefix, limits):
+        ||   File "/home/scottt/work/gcc/gcc-python-plugin/libcpychecker/absinterp.py", line 2522, in iter_traces
+        ||     transitions = curstate.get_transitions()
+        ||   File "/home/scottt/work/gcc/gcc-python-plugin/libcpychecker/absinterp.py", line 1703, in get_transitions
+        ||     return self._get_transitions_for_stmt(stmt)
+        ||   File "/home/scottt/work/gcc/gcc-python-plugin/libcpychecker/absinterp.py", line 1719, in _get_transitions_for_stmt
+        ||     return self._get_transitions_for_GimpleCall(stmt)
+        ||   File "/home/scottt/work/gcc/gcc-python-plugin/libcpychecker/absinterp.py", line 1854, in _get_transitions_for_GimpleCall
+        ||     return meth(stmt, *args)
+        ||   File "/home/scottt/work/gcc/gcc-python-plugin/libcpychecker/refcounts.py", line 670, in impl_PyArg_ParseTuple
+        ||     return self._handle_PyArg_function(stmt, v_fmt, v_varargs, with_size_t=False)
+        ||   File "/home/scottt/work/gcc/gcc-python-plugin/libcpychecker/refcounts.py", line 658, in _handle_PyArg_function
+        ||     _handle_successful_parse(fmt)
+        ||   File "/home/scottt/work/gcc/gcc-python-plugin/libcpychecker/refcounts.py", line 649, in _handle_successful_parse
+        ||     v_new = _get_new_value_for_vararg(unit, exptype)
+        ||   File "/home/scottt/work/gcc/gcc-python-plugin/libcpychecker/refcounts.py", line 638, in _get_new_value_for_vararg
+        ||     check_isinstance(exptype, gcc.PointerType)
+        ||   File "/home/scottt/work/gcc/gcc-python-plugin/gccutils.py", line 630, in check_isinstance
+        ||     raise TypeError('%s / %r is not an instance of %s' % (obj, obj, types))
+        || TypeError: <libcpychecker.PyArg_ParseTuple.ConverterCallbackType instance at 0x7f61ea23f3b0> / <libcpychecker.PyArg_ParseTuple.ConverterCallbackType instance at 0x7f61ea23f3b0> is not an instance of <type 'gcc.PointerType'>
+        || demo.c: In function ‘kwargs_example’:
+'''
+RESULT = [('/home/scottt/work/gcc/gcc-python-plugin/libcpychecker/__init__.py',
+             50,
+             'self.show_possible_null_derefs)\n'),
+           ('/home/scottt/work/gcc/gcc-python-plugin/libcpychecker/refcounts.py',
+              2188,
+              'limits=limits)\n'),
+           ('/home/scottt/work/gcc/gcc-python-plugin/libcpychecker/absinterp.py',
+              2554,
+              'for trace in iter_traces(fun, facets, newprefix, limits):\n'),
+           ('/home/scottt/work/gcc/gcc-python-plugin/libcpychecker/absinterp.py',
+              2522,
+              'transitions = curstate.get_transitions()\n'),
+           ('/home/scottt/work/gcc/gcc-python-plugin/libcpychecker/absinterp.py',
+              1703,
+              'return self._get_transitions_for_stmt(stmt)\n'),
+           ('/home/scottt/work/gcc/gcc-python-plugin/libcpychecker/absinterp.py',
+              1719,
+              'return self._get_transitions_for_GimpleCall(stmt)\n'),
+           ('/home/scottt/work/gcc/gcc-python-plugin/libcpychecker/absinterp.py',
+              1854,
+              'return meth(stmt, *args)\n'),
+           ('/home/scottt/work/gcc/gcc-python-plugin/libcpychecker/refcounts.py',
+              670,
+              'return self._handle_PyArg_function(stmt, v_fmt, v_varargs, with_size_t=False)\n'),
+           ('/home/scottt/work/gcc/gcc-python-plugin/libcpychecker/refcounts.py',
+              658,
+              '_handle_successful_parse(fmt)\n'),
+           ('/home/scottt/work/gcc/gcc-python-plugin/libcpychecker/refcounts.py',
+              649,
+              'v_new = _get_new_value_for_vararg(unit, exptype)\n'),
+           ('/home/scottt/work/gcc/gcc-python-plugin/libcpychecker/refcounts.py',
+              638,
+              'check_isinstance(exptype, gcc.PointerType)\n'),
+           ('/home/scottt/work/gcc/gcc-python-plugin/gccutils.py',
+              630,
+              "raise TypeError('%s / %r is not an instance of %s' % (obj, obj, types))\n")]
+
+def tb_parse(lines):
+    '-> [ (filename, linenum, text), ... ]'
+    lines = list(lines)
+    it = itertools.count()   
+    for i in it:
+        try:
+            line = lines[i]
+        except IndexError:
+            break
+        # File " ... ", line 1234,
+        fs = 'File "'
+        s = line.find(fs)
+        e = line.find('"', s + len(fs))
+        if s == -1 or e == -1:
+            continue
+        filename = line[s + len(fs):e]
+        s1 = line.find(', line ', e)
+        e1 = line.find(',', s1 + len(', line '))
+        if s1 == -1 or e1 == -1:
+            continue
+        try:
+            linenum = int(line[s1 + len(', line '):e1])
+        except ValueError:
+            continue
+        try:
+            text = lines[i + 1]
+        except IndexError:
+            text = '' # still want to yield filename and linenum
+        if text[s:s+2] == '  ':
+            text = text[s+2:-1] # strip '\n'
+            it.next() # consume line
+        else:
+            text = ''
+        yield (filename, linenum, text)
+
+def program_name():
+    return os.path.basename(sys.argv[0])
+
+def main(args):
+    op = optparse.OptionParser(usage='usage: %prog [FILE]...', option_list=[
+        optparse.Option('--self-test', action='store_true'),
+    ])
+
+    (options, args) = op.parse_args(args)
+    if options.self_test:
+        import cStringIO
+        l = list(tb_parse(cStringIO.StringIO(TEST_DATA)))
+        if 0:
+            import pprint
+            pprint.pprint(l)
+        assert(l == RESULT)
+        sys.exit(0)
+
+    if len(args) == 0:
+        fin = sys.stdin
+    elif len(args) == 1:
+        fin = open(args[0])
+    else:
+        op.print_usage()
+        sys.exit(2)
+    for (filename, linenum, text) in tb_parse(fin):
+        sys.stdout.write('%s:%d:%s\n' % (filename, linenum, text))
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
