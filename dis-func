@@ -14,9 +14,11 @@ def print_usage_exit():
 
 def main(args):
     p = optparse.OptionParser(option_list=[
+        optparse.Option('-r', '--no-raw-instructions', action='store_true',
+                        help="don't show the raw instructions in hex next to the assembler"),
         optparse.Option('--no-header', action='store_true',
                         dest='no_header',
-                        help="don't show \"Dump of assembler...\" header and footers"),
+                        help="don't show \"Dump of ...\" headers and footers even when disassembling multiple functions"),
         optparse.Option('-s', '--source', action='store_true',
                         dest='source',
                         help='include source lines'),
@@ -31,12 +33,14 @@ def main(args):
         print_usage_exit()
 
     if len(functions) == 1:
-        # behave like grep doesn't show file names with only one file
+        # behave like grep: don't show file names when only one file is specified on the command line
         options.no_header = True
 
     gdb.execute('file %s' % (exe,))
     for i in functions:
-        dis_options = '/r'
+        dis_options = '/'
+        if not options.no_raw_instructions:
+            dis_options += 'r'
         if options.source:
             dis_options += 'm'
         try:
