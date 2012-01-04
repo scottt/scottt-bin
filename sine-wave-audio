@@ -1,0 +1,29 @@
+#!/usr/bin/env python
+
+# play a 'sine wave' test audio clip so you can test your audio settings
+
+import sys
+import subprocess
+import optparse
+
+def main(args):
+    op = optparse.OptionParser(usage='usage: %prog [FREQUENCY]')
+    (options, args) = op.parse_args(args)
+    try:
+        (freq,) = args
+        freq = float(freq)
+    except ValueError:
+        if len(args) == 0:
+            freq=1000.0
+        else:
+            op.print_usage()
+            sys.exit(2)
+    try:
+        subprocess.check_call('gst-launch audiotestsrc freq=%(freq)f !'
+                               'audioconvert ! audio/x-raw-int,channels=2 ! alsasink' %
+                               dict(freq=freq), shell=1)
+    except KeyboardInterrupt:
+        pass
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
