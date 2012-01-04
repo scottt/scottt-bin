@@ -1,2 +1,4 @@
 #!/bin/sh
-sudo yum -y localinstall $@
+# nogpgcheck because stand alone RPM packages typically are not signed
+# and even if the package is signed we'd need to "rpm --import PUBLICKEY" first
+sudo yum --nogpgcheck -y localinstall $@
