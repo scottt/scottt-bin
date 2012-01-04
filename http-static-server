@@ -1,0 +1,83 @@
+#!/usr/bin/env python
+
+import sys
+import os
+import socket
+import errno
+import optparse
+import mimetypes
+import wsgiref.simple_server
+import doctest
+
+def static_app(environ, start_response):
+    path = environ['PATH_INFO']
+    if not path or path == '/':
+        filename = 'index.html'
+    else:
+        filename = path[1:].replace('/', os.path.sep)
+    try:
+        f = open(filename)
+        mime_type = mimetypes.guess_type(filename)[0]
+        if mime_type is None:
+            mime_type = 'text/plain'
+    except IOError:
+        start_response('404 Not Found', [])
+        return ''
+    else:
+        start_response('200 OK', [('Content-type', mime_type)])
+        return wsgiref.util.FileWrapper(f)
+
+def addrport_parse(addrport):
+    '''
+    >>> addrport_parse('123')
+    ('127.0.0.1', 123)
+    >>> addrport_parse('0.0.0.0:80')
+    ('0.0.0.0', 80)
+    >>> addrport_parse('localhost:8080')
+    ('localhost', 8080)
+    >>> addrport_parse('0.0.0.0:')
+    Traceback (most recent call last):
+        ...
+    ValueError: invalid literal for int() with base 10: ''
+    '''
+    i = addrport.find(':')
+    if i == -1:
+        return ('127.0.0.1', int(addrport))
+    return (addrport[:i], int(addrport[i+1:]))
+
+
+def server_start(host, port):
+    httpd = wsgiref.simple_server.make_server(host, port, static_app)
+    sys.stderr.write('Serving on http://%(host)s:%(port)d\n' % 
+                     dict(host=host, port=port))
+
+    httpd.serve_forever()
+
+def main(args):
+    op = optparse.OptionParser(option_list=[
+        optparse.Option('--addrport', default=None,
+                        help='port number or ipaddr:port to run the server on'),
+    ])
+    (options, args) = op.parse_args(args)
+    if args:
+        op.print_help()
+        sys.exit(2)
+
+    if options.addrport:
+        (host, port) = addrport_parse(options.addrport)
+        server_start(host, port)
+        sys.exit(0)
+
+    (host, port) = ('127.0.0.1', 8321)
+    while 1:
+        try:
+            server_start(host, port)
+        except socket.error, e:
+            if e.errno != errno.EADDRINUSE:
+                raise
+            port += 1
+        else:
+            break
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
