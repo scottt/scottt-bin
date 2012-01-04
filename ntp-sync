@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# synchronize computer time with a trusted source on the internet
+sudo ntpdate -s ntp.nasa.gov
