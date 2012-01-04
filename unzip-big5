@@ -1,0 +1,49 @@
+#!/bin/env python
+
+import sys
+import os
+import shutil
+import optparse
+import zipfile
+
+DEFAULT_SOURCE_ENCODING='big5hkscs' # using big5hkscs instead of big5 for Japanese Hiragana etc support
+
+#import subprocess
+# http://blogs.gnome.org/happyaron/2010/09/03/workaround-of-file-name-problem-while-unzip-handling-cjk-encodings/
+#subprocess.check_call('LANG=C /usr/bin/7z x -y %(input_file)s '
+#                      "| sed -n 's/^Extracting //p' "
+#                      "| sed '1!G;h;$!d' "
+#                      '| echo xargs convmv -f %(source_encoding)s -t utf8 --notest'
+#                      % dict(source_encoding=source_encoding),
+#                      shell=1)
+
+def program_name():
+    return os.path.basename(sys.argv[0])
+
+def main(args):
+    op = optparse.OptionParser(option_list=[
+        optparse.Option('-i', '--input-encoding', default=DEFAULT_SOURCE_ENCODING),
+        optparse.Option('-c', '--ignore-encoding-conversion-errors', action='store_true', default=False),
+    ])
+    (options, args) = op.parse_args(args)
+    try:
+        (input_filename,) = args
+    except ValueError:
+        print_usage_exit()
+
+    z = zipfile.ZipFile(input_filename)
+    for i in z.namelist():
+        z.extract(i)
+        if options.ignore_encoding_conversion_errors:
+            error_handling = 'replace'
+        else:
+            error_handling = 'strict'
+        try:
+            converted_name = i.decode(options.input_encoding, errors=error_handling).encode('utf8')
+        except UnicodeDecodeError:
+            sys.stderr.write("%s: \"%s\" error while decoding \"%s\"\n'" % (program_name(), options.input_encoding, i))
+            converted_name = i.decode(options.input_encoding, errors='replace').encode('utf8')
+        shutil.move(i, converted_name)
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
