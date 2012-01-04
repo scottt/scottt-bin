@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# Getting -acodec to work to avoid double lossy compression and preserve the ID3 tags would be better
+ffmpeg -i $1 -acodec libmp3lame $(echo $1 | sed 's|\.flv$|.mp3|')
