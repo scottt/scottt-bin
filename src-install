@@ -1,0 +1,47 @@
+#!/usr/bin/env python
+
+# Install the source code of any file from Fedora, Ex:
+#$ rpmdev-setuptree
+#$ src-install /bin/true
+# Downloads, extracts and patches the source tree under ~/rpmbuild/BUILD/
+
+import sys
+import os
+import glob
+import optparse
+import subprocess
+
+def main(args):
+    op = optparse.OptionParser(usage='usage: %prog FILE-FROM-OPERATING-SYSTEM',
+                               option_list = [
+                                   optparse.Option('-d', '--install-build-deps',
+                                                   action='store_true',
+                                                   help='install build dependencies'),
+                              ])
+    (options, args) = op.parse_args(args)
+
+    try:
+        (filename,) = args
+    except ValueError:
+        op.print_usage()
+        sys.exit(2)
+
+    p = subprocess.Popen(['rpmquery', '-f', '--queryformat', '%{name} %{sourcerpm}',
+                          filename], stdout=subprocess.PIPE)
+    data = p.stdout.read()
+    (pkg, src_pkg) = data.split()
+    p.wait()
+    subprocess.check_call(['yumdownloader', '--source', pkg])
+    p = subprocess.Popen(['rpmquery', '-pl', src_pkg], stdout=subprocess.PIPE)
+    spec_filename = [ x[:-1] for x in p.stdout.readlines() if x.endswith('.spec\n') ][0]
+    p.wait()
+    subprocess.check_call(['rpm', '-i', src_pkg])
+
+    rpmbuild_prepare = ['rpmbuild', '-bp']
+    if not options.build_deps:
+        rpmbuild_prepare.append('--nodeps')
+    subprocess.check_call(rpmbuild_prepare +[os.path.expanduser('~/rpmbuild/SPECS/') +
+                           spec_filename])
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
