@@ -1,0 +1,28 @@
+#!/usr/bin/env python
+
+# transcode into WebM using ffmpeg
+
+import sys
+import os
+import posix
+import optparse
+import subprocess
+
+def main(args):
+    op = optparse.OptionParser(usage='usage: %prog FILENAME', option_list=[
+        optparse.Option('-o', '--output', default=None, help='output file'),
+    ])
+    (options, args) = op.parse_args(args)
+    try:
+        (filename,) = args
+    except ValueError:
+        op.print_usage()
+        sys.exit(2)
+
+    ncpu = posix.sysconf('SC_NPROCESSORS_ONLN')
+    if options.output is None:
+        options.output = os.path.splitext(os.path.basename(filename))[0] + '.webm'
+    subprocess.check_call(['ffmpeg', '-i', filename, '-vpre', 'libvpx-360p', '-b', '380k', '-threads', str(ncpu), '-y', options.output])
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
