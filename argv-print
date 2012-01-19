@@ -1,0 +1,6 @@
+#!/usr/bin/env python
+
+# use argv-print to debug your shell script command line argument passing / quoting
+
+import sys
+sys.stdout.write('%s\n' % (sys.argv,))
