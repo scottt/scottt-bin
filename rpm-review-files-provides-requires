@@ -1,0 +1,61 @@
+#!/usr/bin/env python
+
+import sys
+import os
+import fnmatch
+import subprocess
+
+# Designed for Fedora package reviews
+#$ rpm-list-files 'gap*'
+#gap-core:
+#/usr/bin/gap
+#...
+#gap-online-help:
+#...
+
+def rpm_files_to_stdout(name):
+    subprocess.check_call(['rpmquery', '-l', name])
+
+def rpm_requires_to_stdout(name):
+    subprocess.check_call(['rpm', '-q', '--requires', name])
+
+def rpm_provides_to_stdout(name):
+    subprocess.check_call(['rpm', '-q', '--provides', name])
+
+def list_files_for_rpm_pattern(pattern):
+    p = subprocess.Popen(['rpmquery', '-a'], stdout=subprocess.PIPE)
+    l = p.stdout.read().split('\n')
+    matches = fnmatch.filter(l, pattern)
+    for i in matches:
+        sys.stdout.write('%s:\n' % (i,))
+        sys.stdout.flush()
+        rpm_files_to_stdout(i)
+        sys.stdout.write('\n')
+        sys.stdout.flush()
+
+    for i in matches:
+        sys.stdout.write('%s requires:\n' % (i,))
+        sys.stdout.flush()
+        rpm_requires_to_stdout(i)
+        sys.stdout.flush()
+        sys.stdout.write('%s provides:\n' % (i,))
+        sys.stdout.flush()
+        rpm_provides_to_stdout(i)
+        sys.stdout.write('\n')
+        sys.stdout.flush()
+
+def program_name():
+    return os.path.basename(sys.argv[0])
+
+def print_usage_exit():
+    sys.stderr.write('usage: %s RPM-GLOB-PATTERN\n' % (program_name(),))
+    sys.exit(2)
+
+def main(args):
+    if not args:
+        print_usage_exit()
+    for i in args:
+        list_files_for_rpm_pattern(i)
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
