@@ -1,0 +1,28 @@
+#!/usr/bin/env python
+
+# Query Fedora build dependencies:
+# fedora-source-query --whatrequires gtk-devel
+# fedora-source-query --requires gtk-devel
+
+import sys
+import os
+import argparse
+import subprocess
+
+def main(args):
+    op = argparse.ArgumentParser(usage='usage: %(prog)s (--requires | --whatrequires) PKG [PKG ...]')
+    op.add_argument('-r', '--rawhide', action='store_true')
+    (options, args) = op.parse_known_args(args)
+    if not args:
+        op.print_usage()
+        sys.exit(2)
+
+    if options.rawhide:
+        repoid = 'rawhide-source'
+    else:
+        repoid = 'fedora-source'
+    subprocess.check_call(['repoquery', '--repoid=' + repoid, '--archlist=src',
+                          ] + args)
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
