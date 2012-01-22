@@ -1,0 +1,7 @@
+#!/bin/sh
+
+if [ "$#" != "0" ]; then
+	vim -R $@ -c 'nm q :qa!<CR>'
+else
+	vim -R - -c 'nm q :qa!<CR>'
+fi
