@@ -43,7 +43,7 @@ def package_version_arch_from_line(line):
 
 def rpm_query(option_list):
     'rpm_query([...]) -> [ LINES_OF_RPM_OUTPUT, ... ]'
-    p = subprocess.Popen(['rpmquery'] + option_list, stdout=subprocess.PIPE)
+    p = subprocess.Popen(['rpm', '-q'] + option_list, stdout=subprocess.PIPE)
     return ( x.rstrip() for x in p.stdout )
 
 def rpm_package_name(package, version=None, arch=None):
