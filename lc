@@ -1,0 +1,4 @@
+#!/bin/sh
+# lc: line count
+
+wc -l $*

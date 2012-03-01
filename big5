@@ -1,0 +1,43 @@
+#!/usr/bin/env python
+
+# convert encodings with: iconv -c -f SRC -t DEST
+
+import sys
+import os
+import subprocess
+
+def program_name():
+    return os.path.basename(sys.argv[0])
+
+main_function_list = []
+
+def main_function(func):
+    global main_function_list
+    main_function_list.append(func)
+    return func
+
+def iconv(src_encoding, to_encoding):
+    subprocess.check_call(['iconv', '-c', '-f', src_encoding, '-t', to_encoding])
+
+@main_function
+def utf16(args):
+    iconv('utf16', 'utf8')
+
+@main_function
+def big5(args):
+    iconv('big5', 'utf8')
+
+@main_function
+def gb2312(args):
+    iconv('gb2312', 'utf8')
+
+def main(args):
+    def to_command_name(s):
+        return s.replace('_', '-')
+
+    name_to_function = dict( (to_command_name(x.__name__), x)
+                            for x in main_function_list )
+    return name_to_function[program_name()](args)
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

@@ -1,0 +1,3 @@
+#!/bin/sh
+aplay /usr/share/sounds/KDE_Critical_Error.wav
+while true ; do aplay /usr/share/sounds/KDE_Beep_RingRing.wav ; done >/dev/null 2>&1

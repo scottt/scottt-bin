@@ -1,0 +1,54 @@
+#!/bin/sh
+set -o nounset
+
+# Check that '$function' is not used in any dynamically linked executable or shared library.
+# Useful as a simple linker level sanity check.
+
+# LIB_DIR must be a directory where your system puts all the .so's
+PREFIX=/
+LIB_DIR=$PREFIX/lib
+
+# '//' -> '/'
+LIB_DIR=$(echo $LIB_DIR | sed 's|/*|/|g')
+
+# By default, only look for function use in shared libraries linked to the executable.
+LOOK_FOR_FUNCTION_USE_IN_EXECUTABLE=0
+
+exec_get_libraries() {
+	# prints the libs required by executables or libs
+	# Use 'readelf -a' because uClibc doesn't implement 'ldd'.
+	readelf -a $* | grep NEEDED | awk '{ print $5 }' | sed -e 's/^\[//' -e 's/\]$//' | sed "s|^|$LIB_DIR/|"
+}
+
+print_usage_exit() {
+	# syntax inspired by 'grep(1)'
+	# FUNCTION can in fact be a global variable or any linker symbol but is most useful for C functions.
+	printf 'usage: %s FUNCTION EXECUTABLE [ LIBs... ]\n' $program_name
+	exit 2;
+}
+
+program_name=$(basename $0)
+case $# in
+0|1) print_usage_exit;;
+*) function=$1; shift; executables_and_libs=$*;;
+esac
+function_used=0
+libs=$(exec_get_libraries $executables_and_libs | sort -u)
+if [ "$LOOK_FOR_FUNCTION_USE_IN_EXECUTABLE" == '1' ]; then
+	libs="$libs $executables_and_libs"
+fi
+
+for i in $libs; do
+	# We look for 'U $function' in 'nm -D' output for libraries linked to $executable.
+	if nm -D $i | grep "U $function" > /dev/null; then
+		printf '"%s" uses "%s"\n' "$i" "$function"
+		function_used=1
+	fi
+done
+
+# Our exit status be used in scripts or Makefiles
+if [ "$function_used" != '0' ]; then
+	exit 1
+else
+	exit 0
+fi

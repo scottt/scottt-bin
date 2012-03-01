@@ -1,0 +1,8 @@
+#!/usr/bin/env python
+import os
+import sys
+
+if len(sys.argv) != 2:
+    sys.stderr.write('Usage: realpath PATH\n')
+    sys.exit(2)
+sys.stdout.write(os.path.realpath(sys.argv[1])+'\n')

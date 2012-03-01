@@ -1,0 +1,45 @@
+#!/bin/sh
+
+set -o nounset
+
+#FIXME: luit does not work under urxvt
+
+TERMINAL_APP=urxvt
+
+SCRIPT_NAME=$(basename $0)
+
+urxvt_execute()
+{
+	urxvt -rv -fn 'xft:Bitstream Vera Sans Mono:pixelsize=22' -e $@
+}
+
+gnome_terminal_execute()
+{
+	gnome-terminal --window-with-profile 'zh_TW.Big5' -e "$*"
+}
+
+PORT=23
+case $SCRIPT_NAME in
+*hsnu*) HOST=bbs.hs.ntnu.edu.tw; LOCALE=zh_TW.Big5;;
+*wretch*) HOST=wretch.twbbs.org; LOCALE=zh_TW.Big5;;
+# note ptt2 comes before ptt
+*ptt2*) HOST=ptt2.twbbs.org; LOCALE=zh_TW.Big5;;
+*ptt*) HOST=ptt.cc; LOCALE=zh_TW.Big5;;
+*atlantis*) HOST=atlantis.twbbs.org; LOCALE=zh_TW.Big5;;
+*) if [ "$#" == "1" ]; then
+		HOST="$1"; LOCALE=zh_TW.Big5
+	elif [ "$#" == "2" ]; then
+		HOST="$1"; PORT="$2"; LOCALE=zh_TW.Big5
+	else
+		echo Usage: "$SCRIPT_NAME" BBS_HOSTNAME [ PORT ]
+		exit 2
+	fi
+esac
+
+if false ; then
+	ENCODING=$(echo "$LOCALE" | sed 's/^.*\.//' | tr '[A-Z]' '[a-z]')
+	"$TERMINAL_APP"_execute luit -encoding $ENCODING telnet -8 $HOST $PORT
+else
+	export LC_CTYPE="$LOCALE"
+	"$TERMINAL_APP"_execute telnet -8 $HOST $PORT
+fi
