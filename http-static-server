@@ -9,23 +9,37 @@ import mimetypes
 import wsgiref.simple_server
 import doctest
 
-def static_app(environ, start_response):
-    path = environ['PATH_INFO']
-    if not path or path == '/':
-        filename = 'index.html'
-    else:
-        filename = path[1:].replace('/', os.path.sep)
-    try:
-        f = open(filename)
-        mime_type = mimetypes.guess_type(filename)[0]
-        if mime_type is None:
-            mime_type = 'text/plain'
-    except IOError:
-        start_response('404 Not Found', [])
-        return ''
-    else:
-        start_response('200 OK', [('Content-type', mime_type)])
-        return wsgiref.util.FileWrapper(f)
+class StaticApp(object):
+    def __init__(self, destdir):
+        os.chdir(destdir)
+    def __call__(self, environ, start_response):
+        def linkify(name, url):
+            return '<a href="' + url + '">' + name + '</a>'
+        def list_dir(path):
+            start_response('200 OK', [('Content-type', 'text/html')])
+            return '<!DOCTYPE html><html><head></head><body>' + '<br>'.join(linkify(x, path + '/' + x)
+                                                                        for x in os.listdir(path)) + '</body></html>'
+        path = environ['PATH_INFO']
+        if not path or path == '/':
+            filename = 'index.html'
+        else:
+            filename = path[1:].replace('/', os.path.sep)
+        try:
+            f = open(filename)
+            mime_type = mimetypes.guess_type(filename)[0]
+            if mime_type is None:
+                mime_type = 'text/plain'
+        except IOError, e:
+            if e.errno == errno.EISDIR:
+                return list_dir(filename)
+            elif e.errno == errno.ENOENT and (not path or path == '/'):
+                return list_dir('.')
+            else:
+                start_response('404 Not Found', [])
+                return '404 Not Found'
+        else:
+            start_response('200 OK', [('Content-type', mime_type)])
+            return wsgiref.util.FileWrapper(f)
 
 def addrport_parse(addrport):
     '''
@@ -46,8 +60,8 @@ def addrport_parse(addrport):
     return (addrport[:i], int(addrport[i+1:]))
 
 
-def server_start(host, port):
-    httpd = wsgiref.simple_server.make_server(host, port, static_app)
+def server_start(host, port, destdir):
+    httpd = wsgiref.simple_server.make_server(host, port, StaticApp(destdir))
     sys.stderr.write('Serving on http://%(host)s:%(port)d\n' % 
                      dict(host=host, port=port))
 
@@ -59,7 +73,12 @@ def main(args):
                         help='port number or ipaddr:port to run the server on'),
     ])
     (options, args) = op.parse_args(args)
-    if args:
+
+    if len(args) == 0:
+        destdir = '.'
+    elif len(args) == 1:
+        destdir = args[0]
+    else:
         op.print_help()
         sys.exit(2)
 
@@ -71,7 +90,7 @@ def main(args):
     (host, port) = ('127.0.0.1', 8321)
     while 1:
         try:
-            server_start(host, port)
+            server_start(host, port, destdir)
         except socket.error, e:
             if e.errno != errno.EADDRINUSE:
                 raise
