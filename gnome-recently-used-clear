@@ -1,0 +1,3 @@
+#!/bin/sh
+rm -f ~/.local/share/recently-used.xbel
+printf 'FIXME: automate gnome-shell restart. Manually type:\n<Alt>F2 r\n'

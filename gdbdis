@@ -8,12 +8,10 @@ import optparse
 
 import gdb
 
-def print_usage_exit():
-    sys.stderr.write('usage: dis-func EXECUTABLE FUNCTION [FUNCTION ...]\n')
-    sys.exit(2)
-
 def main(args):
-    p = optparse.OptionParser(option_list=[
+    p = optparse.OptionParser(usage=('%prog EXECUTABLE NAME-or-ADDRESS [NAME-or-ADDRESS ...]\n'
+                                     'Use gdb to disassemble symbolic names or memory addresses from a program'),
+                              option_list=[
         optparse.Option('-r', '--no-raw-instructions', action='store_true',
                         help="don't show the raw instructions in hex next to the assembler"),
         optparse.Option('--no-header', action='store_true',
@@ -28,9 +26,11 @@ def main(args):
     try:
         (exe, functions) = (args[0], args[1:])
         if (not exe) or (not functions):
-            print_usage_exit()
+            p.print_usage()
+            sys.exit(2)
     except IndexError:
-        print_usage_exit()
+        p.print_usage()
+        sys.exit(2)
 
     if len(functions) == 1:
         # behave like grep: don't show file names when only one file is specified on the command line
@@ -46,10 +46,10 @@ def main(args):
         try:
             o = gdb.execute('disassemble %s %s' % (dis_options, i), to_string=True)
         except gdb.error, e:
-            # let's hope these string messages are stable ..
+            # Let's hope these GDB error message strings are stable ..
             if not e.message.startswith('No symbol table is loaded'):
                 raise
-            sys.stderr.write("dis-func: %s: can't find symbol table\n" % (exe,))
+            sys.stderr.write("gdbdis: %s: can't find symbol table\n" % (exe,))
             if exe.startswith('/usr/bin') or exe.startswith('/bin'):
                 sys.stderr.write('\ttry debuginfo-install\n')
             sys.exit(3)
@@ -62,4 +62,8 @@ def main(args):
         sys.stdout.write(o)
 
 if __name__ == '__main__':
-    main(sys.argv)
+    #NOTE: gdb breaks sys.argv[0] in the way it embed Python
+    # ./gdbdis -> sys.argv: ['']
+    # ./gdbdis 0 1 2 -> sys.argv: ['0', '1', '2']
+    sys.argv = [ 'gdbdis' ] + sys.argv
+    main(sys.argv[1:])

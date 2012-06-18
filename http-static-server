@@ -84,7 +84,7 @@ def main(args):
 
     if options.addrport:
         (host, port) = addrport_parse(options.addrport)
-        server_start(host, port)
+        server_start(host, port, destdir)
         sys.exit(0)
 
     (host, port) = ('127.0.0.1', 8321)
