@@ -4,6 +4,7 @@ import sys
 import os
 import tempfile
 import subprocess
+import optparse
 
 def program_name():
     return os.path.basename(sys.argv[0])
@@ -12,16 +13,25 @@ def print_usage_exit():
     sys.stderr.write('usage: %s PACKAGE\n' % (program_name(),))
     sys.exit(2)
 
-args = sys.argv[1:]
-if not args:
-    print_usage_exit()
-tf = tempfile.TemporaryFile(mode='w+')
-r = subprocess.call(['rpm', '-q', '--changelog'] + args, stdout=tf, stderr=2)
-# NOTE: rpm 4.9 writes its 'package X is not installed' error message to stdout
-# instead of stderr, WTF?
-if r != 0:
+def main(args):
+    op = optparse.OptionParser(option_list=[optparse.Option(
+        '-n', type=int, default=10, help='show N lines',
+    )])
+
+    (options, args) = op.parse_args(args)
+
+    if not args:
+        print_usage_exit()
+    tf = tempfile.TemporaryFile(mode='w+')
+    r = subprocess.call(['rpm', '-q', '--changelog'] + args, stdout=tf, stderr=2)
+    # NOTE: rpm 4.9 writes its 'package X is not installed' error message to stdout
+    # instead of stderr, WTF?
+    if r != 0:
+        tf.seek(0)
+        sys.stderr.write(tf.read())
+        sys.exit(r)
     tf.seek(0)
-    sys.stderr.write(tf.read())
-    sys.exit(r)
-tf.seek(0)
-sys.stdout.writelines(tf.readlines()[:10])
+    sys.stdout.writelines(tf.readlines()[:options.n])
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

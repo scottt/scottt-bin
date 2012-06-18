@@ -1,0 +1,8 @@
+#!/bin/sh
+
+if [ "$CC" = "" ]; then
+	CC=gcc
+fi
+$CC "$@" -dM -E -x c - < /dev/null | sort
+
+# See also: http://gcc.gnu.org/onlinedocs/cpp/Common-Predefined-Macros.html
