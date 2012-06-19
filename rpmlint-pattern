@@ -10,8 +10,11 @@ import tempfile
 # $ rpmlint-pattern 'MYPACKAGE*'
 # (does the equivalant of "find -name 'MYPACKAGE*.rpm' | xargs rpmlint")
 
+def program_name():
+    return os.path.basename(sys.argv[0])
+
 def print_usage_exit():
-    sys.stderr.write('usage: %s RPM-NAME-PATTERN\n')
+    sys.stderr.write('usage: %s RPM-NAME-PATTERN\n' % (program_name(),))
     sys.exit(2)
 
 def main(args):
