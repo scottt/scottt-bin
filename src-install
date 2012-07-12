@@ -35,10 +35,18 @@ def main(args):
     p = subprocess.Popen(['rpmquery', '-pl', src_pkg], stdout=subprocess.PIPE)
     spec_filename = [ x[:-1] for x in p.stdout.readlines() if x.endswith('.spec\n') ][0]
     p.wait()
-    subprocess.check_call(['rpm', '-i', src_pkg])
+    pwd = os.getcwd()
+    rpm_dir_defines = [
+        '--define', '_sourcedir ' + pwd,
+        '--define', '_specdir ' + pwd,
+        '--define', '_builddir ' + pwd,
+        '--define', '_srcrpmdir ' + pwd,
+        '--define', '_rpmdir ' + pwd,
+    ]
+    subprocess.check_call(['rpm', ] + rpm_dir_defines + ['-i', src_pkg])
 
-    rpmbuild_prepare = ['rpmbuild', '-bp']
-    if not options.build_deps:
+    rpmbuild_prepare = [ 'rpmbuild' ] + rpm_dir_defines + ['-bp', ]
+    if not options.install_build_deps:
         rpmbuild_prepare.append('--nodeps')
     subprocess.check_call(rpmbuild_prepare +[os.path.expanduser('~/rpmbuild/SPECS/') +
                            spec_filename])
