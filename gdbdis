@@ -62,7 +62,7 @@ def main(args):
         sys.stdout.write(o)
 
 if __name__ == '__main__':
-    #NOTE: gdb breaks sys.argv[0] in the way it embed Python
+    #NOTE: gdb breaks sys.argv[0] in the way it embeds Python
     # ./gdbdis -> sys.argv: ['']
     # ./gdbdis 0 1 2 -> sys.argv: ['0', '1', '2']
     sys.argv = [ 'gdbdis' ] + sys.argv
