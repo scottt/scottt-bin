@@ -48,8 +48,7 @@ def main(args):
     rpmbuild_prepare = [ 'rpmbuild' ] + rpm_dir_defines + ['-bp', ]
     if not options.install_build_deps:
         rpmbuild_prepare.append('--nodeps')
-    subprocess.check_call(rpmbuild_prepare +[os.path.expanduser('~/rpmbuild/SPECS/') +
-                           spec_filename])
+    subprocess.check_call(rpmbuild_prepare + [spec_filename])
 
 if __name__ == '__main__':
     main(sys.argv[1:])
