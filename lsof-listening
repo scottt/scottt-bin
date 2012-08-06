@@ -1,0 +1,3 @@
+#!/bin/sh
+# List processes listening for IPv4 TCP connections
+sudo lsof -i -nP | grep LISTEN | grep -v IPv6
