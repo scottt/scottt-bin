@@ -1,0 +1,121 @@
+#!/usr/bin/env python
+
+# Configure iptables (the Linux firewall) to allow network traffic for some well known programs:
+# iptables-allow-samba [-i interface]: allow Samba network traffic
+# iptables-allow-ssh [-i interface]: allow SSH network traffic
+# iptables-allow-mdns [-i interface]: allow mDNS network traffic
+
+import sys
+import os
+import subprocess
+import optparse
+
+# Samba (see "Using a firewall" in http://www.samba.org/samba/docs/server_security.html):
+SAMBA_PORTS = [
+    ('udp', 137), # used by nmbd
+    ('udp', 138), # used by nmbd
+    ('tcp', 139), # used by smbd
+    ('tcp', 445), # used by smbd
+]
+
+SSH_PORTS = [
+    ('tcp', 22),
+]
+
+# mDNS, a.k.a. zefroconf is implemented by Avahi under Linux
+# and  by Bonjour in Apple products.
+MDNS_PORTS = [
+    ('udp', 5353),
+]
+
+# DAAP (Digital Audio Access Protocol) is used by iTunes and other music players
+DAAP_PORTS = [
+    ('tcp', 3689),
+]
+
+NFSv4_PORTS = [
+    ('tcp', 2049),
+]
+
+HTTP_PORTS = [
+    ('tcp', 80),
+]
+
+# TODO: DLNA?
+
+def iptables_allow(ports, interface=None):
+    cmd = [ 'sudo', 'iptables' ]
+    if interface is not None:
+        cmd += [ '-i', inteface ]
+
+    for (tcp_udp, dport) in ports:
+        subprocess.check_call(cmd + ['-I', 'INPUT', '1',
+                               '-p', tcp_udp, '--dport', '%d' % (dport,), '-j', 'ACCEPT'])
+
+main_function_map = {}
+
+def main_function(func):
+    global main_function_map
+    main_function_map[func.__name__.replace('_','-')] = func
+
+@main_function
+def iptables_allow_samba(args):
+    op = optparse.OptionParser(option_list = [
+        optparse.Option('-i', '--interface', default=None),
+    ])
+    (options, args) = op.parse_args(args)
+    iptables_allow(SAMBA_PORTS, options.interface)
+
+@main_function
+def iptables_allow_ssh(args):
+    op = optparse.OptionParser(option_list = [
+        optparse.Option('-i', '--interface', default=None),
+    ])
+    (options, args) = op.parse_args(args)
+    iptables_allow(SSH_PORTS, options.interface)
+
+@main_function
+def iptables_allow_mdns(args):
+    op = optparse.OptionParser(option_list = [
+        optparse.Option('-i', '--interface', default=None),
+    ])
+    (options, args) = op.parse_args(args)
+    iptables_allow(MDNS_PORTS, options.interface)
+
+@main_function
+def iptables_allow_daap(args):
+    op = optparse.OptionParser(option_list = [
+        optparse.Option('-i', '--interface', default=None),
+    ])
+    (options, args) = op.parse_args(args)
+    iptables_allow(DAAP_PORTS, options.interface)
+
+@main_function
+def iptables_allow_nfsv4(args):
+    op = optparse.OptionParser(option_list = [
+        optparse.Option('-i', '--interface', default=None),
+    ])
+    (options, args) = op.parse_args(args)
+    iptables_allow(NFSv4_PORTS, options.interface)
+
+@main_function
+def iptables_allow_http(args):
+    op = optparse.OptionParser(option_list = [
+        optparse.Option('-i', '--interface', default=None),
+    ])
+    (options, args) = op.parse_args(args)
+    iptables_allow(HTTP_PORTS, options.interface)
+
+def main_function_dispatch(name, args):
+    try:
+        f = main_function_map[name]
+    except KeyError:
+        sys.stderr.write('%s is not a valid command name\n' % (name,))
+        sys.exit(2)
+    f(args)
+
+def program_name():
+    return os.path.basename(sys.argv[0])
+
+if __name__ == '__main__':
+    main_function_dispatch(program_name(), sys.argv[1:])
