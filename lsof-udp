@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+# lsof-listening [-6]: list programs listening on a TCP port (e.g. servers)
+# lsof-udp: list programs bound to a UDP port
+
 import sys
 import os
 import subprocess
