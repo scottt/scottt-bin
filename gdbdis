@@ -8,6 +8,55 @@ import optparse
 
 import gdb
 
+def gdb_fix_argv():
+    '''
+    gdb breaks sys.argv[0] in the way it embeds Python
+    ./gdb-python-script -> sys.argv: ['']
+    when argv should be: [ './gdb-python-script' ]
+    ./gdb-python-script 0 1 2 -> sys.argv: ['0', '1', '2']
+    when argv should be should be:  [ './gdb-python-script', '0', '1', '2' ]
+    '''
+    try:
+        f = open('/proc/%d/cmdline' % (os.getpid(),))
+    except IOError:
+        return
+    l = f.readline()
+    f.close()
+    cmdline = l.split('\x00')
+    if cmdline[-1] == '':
+        cmdline = cmdline[:-1]
+    if cmdline[0].endswith('gdb') and cmdline[1] == '--python':
+        sys.argv = cmdline[2:]
+
+def gdb_disassemble(exe, functions, options):
+    gdb.execute('file %s' % (exe,))
+    for i in functions:
+        if options.raw_instructions or options.source:
+            dis_options = '/'
+        else:
+            dis_options = ''
+        if options.raw_instructions:
+            dis_options += 'r'
+        if options.source:
+            dis_options += 'm'
+        try:
+            o = gdb.execute('disassemble %s %s' % (dis_options, i), to_string=True)
+        except gdb.error, e:
+            # Let's hope these GDB error message strings are stable ..
+            if not e.message.startswith('No symbol table is loaded'):
+                raise
+            sys.stderr.write("%s: %s: can't find symbol table\n" % (program_name(), exe,))
+            if exe.startswith('/usr/bin') or exe.startswith('/bin'):
+                sys.stderr.write('\ttry debuginfo-install\n')
+            sys.exit(3)
+
+        if options.no_header:
+            i = o.find('\n')
+            j = o.rfind('\n')
+            j = o.rfind('\n', 0, j)
+            o = o[i+1:j+1]
+        sys.stdout.write(o)
+
 def main(args):
     p = optparse.OptionParser(usage=('%prog EXECUTABLE NAME-or-ADDRESS [NAME-or-ADDRESS ...]\n'
                                      'Use gdb to disassemble symbolic names or memory addresses from a program'),
@@ -36,34 +85,9 @@ def main(args):
         # behave like grep: don't show file names when only one file is specified on the command line
         options.no_header = True
 
-    gdb.execute('file %s' % (exe,))
-    for i in functions:
-        dis_options = '/'
-        if not options.no_raw_instructions:
-            dis_options += 'r'
-        if options.source:
-            dis_options += 'm'
-        try:
-            o = gdb.execute('disassemble %s %s' % (dis_options, i), to_string=True)
-        except gdb.error, e:
-            # Let's hope these GDB error message strings are stable ..
-            if not e.message.startswith('No symbol table is loaded'):
-                raise
-            sys.stderr.write("gdbdis: %s: can't find symbol table\n" % (exe,))
-            if exe.startswith('/usr/bin') or exe.startswith('/bin'):
-                sys.stderr.write('\ttry debuginfo-install\n')
-            sys.exit(3)
-
-        if options.no_header:
-            i = o.find('\n')
-            j = o.rfind('\n')
-            j = o.rfind('\n', 0, j)
-            o = o[i+1:j+1]
-        sys.stdout.write(o)
+    options.raw_instructions = not options.no_raw_instructions
+    gdb_disassemble(exe, functions, options)
 
 if __name__ == '__main__':
-    #NOTE: gdb breaks sys.argv[0] in the way it embeds Python
-    # ./gdbdis -> sys.argv: ['']
-    # ./gdbdis 0 1 2 -> sys.argv: ['0', '1', '2']
-    sys.argv = [ 'gdbdis' ] + sys.argv
+    gdb_fix_argv()
     main(sys.argv[1:])
