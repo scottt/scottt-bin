@@ -1,0 +1,124 @@
+#!/usr/bin/env python
+
+# usage: COMPILEFUNC [options] SOURCE-FILE FUNCTION [FUNCTION...]
+# generate assembler output on stdout for specified functions.
+# Supports the CC, CFLAGS, CXX, CXXFLAGS, LDFLAGS and GDB environment variables.
+# Unknown options are passed to the compiler.
+# Invokes gcc or g++ depending on the file extension.
+
+# NOTE: unless --do-link is passed, global variable and function references
+# will appear to reference the wrong address.
+
+import sys
+import os
+import subprocess
+import errno
+import argparse
+import tempfile
+
+DEBUG = 0
+
+def program_name():
+    return os.path.basename(sys.argv[0])
+
+def gdb_batch_disassemble(gdb, exe, functions, options):
+    t = tempfile.NamedTemporaryFile(mode='w+')
+    t.write('file %s\n' % (exe,))
+    if options.raw_instructions or options.source:
+        dis_options = '/'
+    else:
+        dis_options = ''
+    if options.raw_instructions:
+        dis_options += 'r'
+    if options.source:
+        dis_options += 'm'
+
+    for i in functions:
+        t.write('disassemble %s %s\n' % (dis_options, i))
+    t.seek(0)
+
+    (outfile, errfile) = (tempfile.TemporaryFile(mode='w+'), tempfile.TemporaryFile(mode='w+'))
+    subprocess.call([gdb, '--batch', '-x', t.name], stdout=outfile, stderr=errfile)
+    # NOTE: gdb exits with 0 even on errors ...
+    # Let's hope these GDB error message strings are stable ..
+    errfile.seek(0)
+    errlines = [ x for x in errfile.readlines() ]
+    if errlines:
+        sys.stderr.write('%s input:\n' % (gdb,))
+        t.seek(0)
+        sys.stderr.write(t.read())
+        sys.stderr.write('\n%s stderr:\n' % (gdb,))
+        # errlines[0] would be 't.gdb:2: Error in sourced command file:'
+        sys.stderr.writelines(errlines[1:])
+        raise ValueError
+
+    outfile.seek(0)
+    o = outfile.read()
+
+    if not options.no_header:
+        sys.stdout.write(o)
+        return
+
+    (start, end) = (-1, 0)
+    while 1:
+        start = o.find('Dump of assembler code for function ', start + 1)
+        if start == -1:
+            break
+        start = o.find('\n', start) + 1
+        end = o.find('End of assembler dump.\n', start)
+        assert(end != -1)
+        sys.stdout.write(o[start:end])
+
+def main(args):
+    ap = argparse.ArgumentParser(description='generate asm for the specified functions')
+    ap.add_argument('source_file', metavar='SOURCE-FILE', help='C or C++ source file')
+    ap.add_argument('functions', metavar='FUNCTION', nargs='+', help='function to generate asm for')
+    ap.add_argument('--do-link', action='store_true', help='link and not just compile the code')
+    ap.add_argument('--source', action='store_true', help='generate mixed source and asm output')
+    ap.add_argument('--raw-instructions', action='store_true',
+                    help='show instruction encodings in hex next to asm')
+    (args, unknown_args) = ap.parse_known_args(args)
+    if len(args.functions) < 2:
+        args.no_header = True
+    else:
+        args.no_header = False
+
+    t = args.source_file
+    if t.endswith('.cpp') or t.endswith('.cc'):
+        (env_cc, default_cc, env_cflags) = ('CXX', 'g++', 'CXXFLAGS')
+    else:
+        (env_cc, default_cc, env_cflags) = ('CC', 'gcc', 'CFLAGS')
+    cc = os.environ.get(env_cc, default_cc)
+    cflags = os.environ.get(env_cflags, '')
+    cflags = [ x for x in cflags.split() if x ]
+    gdb = os.environ.get('GDB')
+    if gdb is None:
+        # 'arm-linux-androideabi-gcc' -> 'arm-linux-androideabi-gdb'
+        try:
+            gdb = cc[:cc.rindex('-')+1]+'gdb'
+        except ValueError:
+            gdb = 'gdb'
+
+    (fout_fd, fout) = tempfile.mkstemp()
+    t = ['-g']
+    if args.do_link:
+        ldflags = os.environ.get('LDFLAGS', '')
+        ldflags = [ x for x in ldflags.split() if x ]
+        t.extend([ args.source_file ] + ldflags)
+    else:
+        t.extend([ '-c', args.source_file ])
+    try:
+        cmd = [cc] + cflags  + unknown_args + t + ['-o', fout]
+        if DEBUG > 1:
+            print >> sys.stderr, 'compile:', cmd
+        r = subprocess.call(cmd)
+        if r == 0:
+            try:
+                gdb_batch_disassemble(gdb, fout, args.functions, args)
+            except ValueError:
+                sys.exit(3)
+    finally:
+        os.unlink(fout)
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
