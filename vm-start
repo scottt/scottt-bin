@@ -2,10 +2,18 @@
 
 import sys
 import os
+import errno
 import subprocess
 
 def program_name():
     return os.path.basename(sys.argv[0])
+
+def make_dirs(n):
+    try:
+        os.makedirs(n)
+    except OSError, e:
+        if e.errno != errno.EEXIST:
+            raise
 
 def main(args):
     p = program_name()
@@ -14,11 +22,22 @@ def main(args):
     vm = p[:i]
     action = p[i+1:]
 
-    valid_actions = set(['start', 'shutdown', 'resume', 'suspend'])
-    if action not in valid_actions:
+    no_arg_actions = set(['start', 'shutdown', 'reboot'])
+    valid_actions = no_arg_actions | set(['save', 'restore'])
+
+    save_dir = os.path.join(os.path.expanduser('~'), '.vmstate')
+    save_file = os.path.join(save_dir, '%s.vmsave' % (vm,))
+    make_dirs(save_dir)
+    if action in no_arg_actions:
+        subprocess.check_call(['sudo', 'virsh', action, vm])
+    elif action == 'save':
+        subprocess.check_call(['sudo', 'virsh', 'save', '--verbose',
+                               vm, save_file])
+    elif action == 'restore':
+        subprocess.check_call(['sudo', 'virsh', 'restore', save_file])
+    else:
         sys.stderr.write('%s: invalid action "%s" must be one of %r\n' %
                          (p, action, valid_actions))
-    subprocess.check_call(['sudo', 'virsh', action, vm])
 
 if __name__ == '__main__':
     main(sys.argv[1:])
