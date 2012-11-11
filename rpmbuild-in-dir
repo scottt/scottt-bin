@@ -5,18 +5,43 @@ import os
 import subprocess
 import errno
 
-def main(args):
-    pwd = os.getcwd()
-    cmd = [
-        'rpmbuild',
-        '--define', '_sourcedir ' + pwd,
-        '--define', '_specdir ' + pwd,
-        '--define', '_builddir ' + pwd,
-        '--define', '_srcrpmdir ' + pwd,
-        '--define', '_rpmdir ' + pwd, ]
-    cmd.extend(args)
-    r = subprocess.call(cmd)
+def rpm_op_in_dir(cmd, path, args):
+    t = [
+        cmd,
+        '--define', '_sourcedir ' + path,
+        '--define', '_specdir ' + path,
+        '--define', '_builddir ' + path,
+        '--define', '_srcrpmdir ' + path,
+        '--define', '_rpmdir ' + path, ]
+    t.extend(args)
+    return subprocess.call(t)
+
+main_function_map = {}
+
+def main_function(func):
+    global main_function_map
+    main_function_map[func.__name__.replace('_','-')] = func
+
+@main_function
+def rpmspec_in_dir(args):
+    r = rpm_op_in_dir('rpmspec', os.getcwd(), args)
     sys.exit(r)
 
+@main_function
+def rpmbuild_in_dir(args):
+    r = rpm_op_in_dir('rpmbuild', os.getcwd(), args)
+    sys.exit(r)
+
+def main_function_dispatch(name, args):
+    try:
+        f = main_function_map[name]
+    except KeyError:
+        sys.stderr.write('%s is not a valid command name\n' % (name,))
+        sys.exit(2)
+    f(args)
+
+def program_name():
+    return os.path.basename(sys.argv[0])
+
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main_function_dispatch(program_name(), sys.argv[1:])
