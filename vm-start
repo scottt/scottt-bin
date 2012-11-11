@@ -12,7 +12,7 @@ def make_dirs(n):
     try:
         os.makedirs(n)
     except OSError, e:
-        if e.errno != errno.EEXIST:
+        if e.errno != errno.EEXIST or (not os.path.isdir(n)):
             raise
 
 def main(args):
