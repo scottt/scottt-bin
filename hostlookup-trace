@@ -1,4 +1,4 @@
-#!/usr/bin/gdb --python
+#!/home/scottt/gdb/bin/gdb --python
 # vim: set filetype=python:
 
 '''Trace hostname lookups through gdb.
@@ -6,7 +6,7 @@
 Before running this script, be sure to install debuginfo for glibc
 e.g. debuginfo-install glibc
 
-usage: hostlookup-trace [OPTIONS] EXE [ARGS...]
+usage: hostlookup-trace [OPTIONS] [EXE ARGS...]
 e.g.
     $ hostlookup-trace curl http://www.google.com
     <...>
@@ -43,11 +43,21 @@ e.g.
         servlen = 0
         flags = 1
 
+    $ hostlookup-trace -p $(pgrep sshd)
+
 See "hostlookup-trace --help" for the "--backtrace" and "--python-backtrace" options.
+
+As written, hostlookup-trace only works for programs that use the standard gethostbyX(), get{name,addr}info() functions.
+There are other ways to lookup hostnames, e.g. glibc provides a rarely used getaddrinfo_a() interface.
+Apps could use the c-ares async DNS library[1] or the bind derived libresolv or other custom DNS code.
+nslookup and dig fall into the "uses libresolv directly and thus doesn't work" category. (They're shipped with bind)
+On the other hand, programs that don't use glibc to resolve hostnames wouldn't respect /etc/hosts or work with setups like Active Directory / LDAP anyway[2].
+
+[1]: http://c-ares.haxx.se/
+[2]: http://en.wikipedia.org/wiki/Name_Service_Switch
 '''
 
 import sys
-import optparse
 import argparse
 import re
 
@@ -182,14 +192,19 @@ def program_name():
     return os.path.basename(sys.argv[0])
 
 def print_usage_exit():
-    sys.stderr.write('usage: %s [OPTIONS] EXE [ARGS...]\n' % (program_name(),))
+    sys.stderr.write('usage: %s [OPTIONS] [EXE ARGS...]\n' % (program_name(),))
     sys.exit(2)
 
-def main(args):
-    if len(args) < 1:
-        print_usage_exit()
+def gdb_multi_process_setup():
+    # see http://tromey.com/blog/?p=734
+    gdb.execute('set detach-on-fork off')
+    gdb.execute('set non-stop on')
+    # NOTE: gdb 7.4 allows the inferior to dump core with unhandled "int3"'s on x86-64 with target-async
+    # gdb.execute('set target-async on')
 
+def main(args):
     p = argparse.ArgumentParser()
+    p.add_argument('--attach', '-p', type=int, default=None, metavar='PID', help='attach to running process')
     p.add_argument('--backtrace', '--bt', action='store_true', help='do backtrace when a hostname lookup funciton is called')
     p.add_argument('--python-backtrace', '--py-bt', action='store_true', help=(
         'like "--backtrace" but do a Python backtrace. '
@@ -197,15 +212,17 @@ def main(args):
     p.add_argument('args', nargs=argparse.REMAINDER, help='program to be traced')
     options = p.parse_args(args)
     args = options.args
-    if len(args) < 1:
+
+    if not options.attach and len(args) < 1:
         print_usage_exit()
 
-    exe = args[0]
-    args = args[1:]
-
     gdb.execute('set python print-stack full')
-    gdb.execute('file %s' % (exe,))
-    gdb.execute('set args %s' % (' '.join(shelx_quote(x) for x in args)))
+    gdb_multi_process_setup()
+    if not options.attach:
+        exe = args[0]
+        args = args[1:]
+        gdb.execute('file %s' % (exe,))
+        gdb.execute('set args %s' % (' '.join(shelx_quote(x) for x in args)))
     gdb.execute('set breakpoint pending on')
 
     for (i, real_name, decode_func) in hostname_lookup_funs:
@@ -214,10 +231,15 @@ def main(args):
         breakp("'%s'" % (i,), callback=dump_function_gen(real_name, decode_func, options))
 
     try:
-        gdb.execute('run')
+        if options.attach:
+            gdb.execute('attach %d' % (options.attach,))
+            gdb.execute('continue')
+        else:
+            gdb.execute('run')
     finally:
-        for i in gdb.inferiors():
-            gdb.execute('kill inferior %d' % (i.num,))
+        if not options.attach:
+            for i in gdb.inferiors():
+                gdb.execute('kill inferior %d' % (i.num,))
 
 if __name__ == '__main__':
     gdb_fix_argv()
