@@ -1,4 +1,4 @@
-#!/home/scottt/gdb/bin/gdb --python
+#!/usr/bin/gdb --python
 # vim: set filetype=python:
 
 '''Trace hostname lookups through gdb.
@@ -72,16 +72,21 @@ def gdb_fix_argv():
     when argv should be should be:  [ './gdb-python-script', '0', '1', '2' ]
     '''
     try:
-        f = open('/proc/%d/cmdline' % (os.getpid(),))
+        f = open('/proc/self/cmdline')
     except IOError:
         return
     l = f.readline()
     f.close()
     cmdline = l.split('\x00')
-    if cmdline[-1] == '':
-        cmdline = cmdline[:-1]
-    if cmdline[0].endswith('gdb') and cmdline[1] == '--python':
-        sys.argv = cmdline[2:]
+    # /proc/X/cmdline always ends with '\x00'
+    cmdline = cmdline[:-1]
+    c = cmdline[0]
+    # Only mess with sys.argv if we're running 'gdb --python'
+    if not c.endswith('/gdb') and not c.endswith('-gdb'):
+        return
+    if cmdline[1] != '--python':
+        return
+    sys.argv = cmdline[2:]
 
 class _BreakpointWithCallback(gdb.Breakpoint):
     def __init__(self, location, callback):
@@ -98,9 +103,11 @@ def breakp(location, condition=None, callback=None):
     # FIXME: need to figure out how to do conditional breakpoints in Python
     assert(condition is None)
     if callback is None:
-        return gdb.Breakpoint(location)
+        bp = gdb.Breakpoint(location)
     else:
-        return _BreakpointWithCallback(location, callback)
+        bp = _BreakpointWithCallback(location, callback)
+    bp.silent = True
+    return bp
 
 def _inet_ntop(af_expr, addr_expr):
     t = gdb.parse_and_eval('(char*)malloc(4096)')
