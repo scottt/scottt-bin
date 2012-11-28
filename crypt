@@ -29,16 +29,7 @@ def salt_gen(length):
     salt_candidates = string.letters + string.digits + './'
     return ''.join( random.choice(salt_candidates) for x in xrange(8) )
 
-def do_crypt(pure_text, salt):
-    return crypt_module.crypt(pure_text, salt)
-
-def do_md5(pure_text, salt):
-    '''Passing a "salt" that starts with "$1$" to crypt(3)
-    will use an md5 based crypt algorithm,
-    works at least with glibc on a linux system'''
-    return crypt_module.crypt(pure_text, '$1$' + salt)
-
-def crypt_main(args, salt_len, crypt_func):
+def crypt_main(args, salt_len, salt_prefix):
     global crypt_options
     op = optparse.OptionParser(usage='usage: %prog [ OPTIONS ]\n'
                      'input is read from the "PASSWORD" environment variable', option_list = [
@@ -59,16 +50,26 @@ def crypt_main(args, salt_len, crypt_func):
     else:
         salt = options.salt
 
-    cipher_text = crypt_func(pure_text, salt)
-    sys.stdout.write('{\n\tcipher_text: %r,\n\tsalt: %r\n}\n' % (cipher_text, salt))
+    cipher_text = crypt_module.crypt(pure_text, salt_prefix + salt)
+    sys.stdout.write(cipher_text + '\n')
 
 @main_function
 def crypt(args):
-    return crypt_main(args, salt_len=2, crypt_func=do_crypt)
+    return crypt_main(args, salt_len=2, salt_prefix='')
 
 @main_function
 def md5crypt(args):
-    return crypt_main(args, salt_len=8, crypt_func=do_md5)
+    # For "$1$" as salt prefix, see Glibc Notes  in
+    # http://man7.org/linux/man-pages/man3/crypt.3.html
+    return crypt_main(args, salt_len=8, salt_prefix='$1$')
+
+@main_function
+def sha256crypt(args):
+    return crypt_main(args, salt_len=16, salt_prefix='$5$')
+
+@main_function
+def sha512crypt(args):
+    return crypt_main(args, salt_len=16, salt_prefix='$6$')
 
 if __name__ == '__main__':
     main(sys.argv[1:])

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# usage: COMPILEFUNC [options] SOURCE-FILE FUNCTION [FUNCTION...]
+# usage: compilefunc [options] SOURCE-FILE FUNCTION [FUNCTION...]
 # generate assembler output on stdout for specified functions.
 # Supports the CC, CFLAGS, CXX, CXXFLAGS, LDFLAGS and GDB environment variables.
 # Unknown options are passed to the compiler.
