@@ -56,6 +56,7 @@ System Administration
 * iptables-allow-samba
 * iptables-allow-ssh
 * ntp-sync -- sync system time through NTP
+* disk-{scan,delete} -- useful for eSATA hotplug. Nicer than scsi-rescan in sg3_utils.
 
 Text Encoding Conversion
 ===
@@ -86,10 +87,11 @@ Fedora / RHEL Related
 * fedora-source-query -- query Fedora build dependencies
 * src-install -- install the source for a file that comes with the OS
 
-Video Encoding / Conversion
+Audio / Video Encoding and Conversion
+===
 * ffmpeg-webm-360p -- convert video to the WebM format through ffmpeg
-* flv-to-mp3
-
+* flv-to-mp3 -- covnert audio tracks in FLV to an MP3
+* pulseaudio-rtp-serve -- broadcast audio from Linux through RTP in PCM or MP3 format
 
 Miscellaneous
 ===
