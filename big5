@@ -25,11 +25,11 @@ def utf16(args):
 
 @main_function
 def big5(args):
-    iconv('big5', 'utf8')
+    iconv('big5hkscs', 'utf8')
 
 @main_function
 def gb2312(args):
-    iconv('gb2312', 'utf8')
+    iconv('gb18030', 'utf8')
 
 def main(args):
     def to_command_name(s):
