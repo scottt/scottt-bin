@@ -1,0 +1,65 @@
+#!/usr/bin/env python
+
+'''
+Instruct Pulseaudio module-rtp-send to read from the 'rtp' source and multicast
+Data Flow
+If MP3: pulseaudio (PCM) -> cvlc (transcode to MP3) -> RTP Multicast on (host, port) specified
+else:   pulseaudio (PCM) -> RTP Multicast on (host, port) specified
+
+http://www.freedesktop.org/wiki/Software/PulseAudio/Documentation/User/Network/RTP
+'''
+
+import sys
+import os
+import subprocess
+import optparse
+
+def main(args):
+    p = optparse.OptionParser(option_list=[
+        optparse.Option('--mp3', action='store_true', help='Stream MP3 format. Requires "cvlc" to transcode and adds latency.'),
+        optparse.Option('--format', default='s16be', help='PCM format'),
+        optparse.Option('--channels', default=2, type=int, help='# of PCM channels'),
+        optparse.Option('--rate', default=44100, type=int, help='PCM sample rate'),
+        optparse.Option('--host', default='225.0.0.1', help='Multicast host'),
+        optparse.Option('--port', default=5556, type=int, help='Multicast port'),
+    ])
+    (options, args) = p.parse_args(args)
+
+    dev_null = open('/dev/null', 'w')
+
+    # new Pulseaudio sink "rtp"
+    # 'description' causes "Failure: Module initalization failed"
+    # so this appears as "Null Output" in the mixer applications
+    subprocess.check_call(['pactl', 'load-module', 'module-null-sink',
+                           'sink_name=rtp',
+                           'format=' + options.format,
+                           'channels=%d' % (options.channels,),
+                           'rate=%d' % (options.rate,),
+                          ], stdout=dev_null)
+
+    if options.mp3:
+        (host, port) = ('127.0.0.1', options.port + 2)
+        assert(port <= 65535)
+    else:
+        (host, port) = (options.host, options.port)
+
+    subprocess.check_call(['pactl', 'load-module', 'module-rtp-send',
+                           'source=rtp.monitor',
+                           'destination=' + host,
+                           'port=%d' % (port,),
+                           'loop=1',
+                          ], stdout=dev_null)
+
+    # To play the stream
+    sys.stdout.write('vlc rtp://@%s:%s\n' % (options.host, options.port))
+
+    if options.mp3:
+        sys.stderr.write('press <CTRL-C> to stop transcoding with "cvlc"\n')
+        subprocess.check_call(['cvlc','rtp://@%s:%d' % (host, port),
+                               (':sout=#transcode{acodec=mp3,ab=256,channels=%(channels)d}'
+                               ':duplicate{dst=rtp{dst=%(host)s,mux=ts,port=%(port)d}}'
+                               % dict(channels=options.channels, host=options.host, port=options.port)),
+                              ])
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
