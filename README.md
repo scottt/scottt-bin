@@ -56,7 +56,7 @@ System Administration
 * iptables-allow-samba
 * iptables-allow-ssh
 * ntp-sync -- sync system time through NTP
-* disk-{scan,delete} -- useful for eSATA hotplug. Nicer than scsi-rescan in sg3_utils.
+* disk-{scan,deactivate} -- useful for eSATA hotplug. Nicer than scsi-rescan in sg3_utils.
 
 Text Encoding Conversion
 ===

@@ -12,7 +12,7 @@ Similar to scsi-rescan in sg3_utils. Useful for eSATA disk hotplug.
 Implementation:
 echo '- - -' > /sys/class/scsi_host/host*/scan
 
-usage: disk-delete DEVICE
+usage: disk-deactivate DEVICE
 
 It derives (Host, Bus, Target, Lun) from Linux device names then does:
 echo 1 > /sys/bus/scsi/devices/12:0:0:0/block/sdc/device/delete
@@ -131,7 +131,7 @@ def disk_scan(args):
                      ((name, proc_name, vendor, model, size) + hbtl))
 
 @main_function
-def disk_delete(args):
+def disk_deactivate(args):
     p = optparse.OptionParser(usage='%prog KERNEL_BLOCK_DEVICE_NAME')
     (options, args) = p.parse_args(args)
     try:
