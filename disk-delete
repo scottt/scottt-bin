@@ -1,0 +1,167 @@
+#!/usr/bin/env python
+
+import sys
+import os
+import glob
+import optparse
+
+'''
+usage: disk-scan
+Similar to scsi-rescan in sg3_utils. Useful for eSATA disk hotplug.
+
+Implementation:
+echo '- - -' > /sys/class/scsi_host/host*/scan
+
+usage: disk-delete DEVICE
+
+It derives (Host, Bus, Target, Lun) from Linux device names then does:
+echo 1 > /sys/bus/scsi/devices/12:0:0:0/block/sdc/device/delete
+
+See:
+* http://gurkulindia.com/main/2011/05/linux-dynamically-addremove-scsi-from-linux/
+'''
+
+# strace lscsi --kname
+# <...>
+# open("/sys/bus/scsi/devices/1:0:0:0/type", O_RDONLY) = 3
+# open("/sys/bus/scsi/devices/1:0:0:0/vendor", O_RDONLY) = 3
+# open("/sys/bus/scsi/devices/1:0:0:0/model", O_RDONLY) = 3
+# open("/sys/bus/scsi/devices/1:0:0:0/rev", O_RDONLY) = 3
+# openat(AT_FDCWD, "/sys/bus/scsi/devices/1:0:0:0", O_RDONLY|O_NONBLOCK|O_DIRECTORY|O_CLOEXEC) = 3
+# openat(AT_FDCWD, "/sys/bus/scsi/devices/1:0:0:0/block", O_RDONLY|O_NONBLOCK|O_DIRECTORY|O_CLOEXEC) = 3
+# stat("/sys/bus/scsi/devices/1:0:0:0/block/sda", {st_mode=S_IFDIR|0755, st_size=0, ...}) = 0
+# chdir("/sys/bus/scsi/devices/1:0:0:0/block/sda") = 0
+# getcwd("/sys/devices/pci0000:00/0000:00:1f.2/ata2/host1/target1:0:0/1:0:0:0/block/sda", 260) = 78
+# -- start of next device --
+# open("/sys/bus/scsi/devices/3:0:0:0/type", O_RDONLY) = 3
+# <...>
+
+def human_size(size_in_blocks):
+    '''
+    Number in "/sys/block/sda/size" -> "250G"
+    
+    >>> human_size(488397168)
+    '250.0G'
+    >>> human_size(625142448)
+    '320.0G'
+    '''
+    units = [ 'K', 'M', 'G', 'T', 'P' ]
+    block_size = 512
+
+    (n, i) = (size_in_blocks / (1000.0/512 + .0005), 0)
+    while n >= 1000:
+        (n, i) = (n / 1000.0, i + 1)
+    return '%.1f%s' % (n, units[i])
+
+def disk_info(name):
+    '-> [ (kernel_name, proc_name, vendor, model, size, (host, bus, target, lun)) ... ]'
+    try:
+        i = glob.glob('/sys/bus/scsi/devices/*/block/' + name)[0]
+    except IndexError:
+        return None
+    f = i.split(os.path.sep)
+    kname = f[-1]
+    hbtl = tuple( int(x) for x in f[-3].split(':') )
+    proc_name = open('/sys/class/scsi_host/host%d/proc_name' % (hbtl[0],)).read().strip()
+    d = ('/sys/bus/scsi/devices/%d:%d:%d:%d' % hbtl)
+
+    def read(key):
+        return open(os.path.join(d, key)).read().strip()
+
+    vendor = read('vendor')
+    model = read('model')
+    size = human_size(int(open(os.path.join(i, 'size')).read()))
+    return (kname, proc_name, vendor, model, size, hbtl)
+
+def disk_list():
+    '-> [ disk_info() ... ]'
+    # /sys/bus/scsi/devices/1:0:0:0/block/sda
+    l = glob.glob('/sys/bus/scsi/devices/*/block/*')
+    out = []
+    for i in l:
+        kname = os.path.basename(i)
+        out.append(disk_info(kname))
+
+    out.sort(key=lambda x: x[-1])
+    return out
+
+def host_bus_target_lun_from_name(name):
+    '-> (host, bus, target, lun) or None'
+    try:
+        t = glob.glob('/sys/bus/scsi/devices/*/block/' + name)[0]
+    except IndexError:
+        return None
+
+    f = t.split(os.path.sep)
+    hbtl = tuple( int(x) for x in f[-3].split(':') )
+    return hbtl
+
+main_function_map = {}
+
+def main_function(func):
+    global main_function_map
+    main_function_map[func.__name__.replace('_','-')] = func
+
+@main_function
+def disk_scan(args):
+    p = optparse.OptionParser(usage='%prog')
+    (options, args) = p.parse_args(args)
+    
+    old_disks = disk_list()
+
+    for i in glob.glob('/sys/class/scsi_host/host*/scan'):
+        with open(i, 'w') as f:
+            f.write('- - -\n')
+
+    new_disks = disk_list()
+
+    delta = []
+    for i in new_disks:
+        if i in old_disks:
+            continue
+        delta.append(i)
+
+    if not delta:
+        sys.stdout.write('No new disks discovered\n')
+        sys.exit(0)
+
+    sys.stdout.write('New disk(s):\n')
+    (name, proc_name, vendor, model, size, hbtl) = i
+    sys.stdout.write('%s\t%s\t%s\t%s\t%s\t[%d:%d:%d:%d]\n' %
+                     ((name, proc_name, vendor, model, size) + hbtl))
+
+@main_function
+def disk_delete(args):
+    p = optparse.OptionParser(usage='%prog KERNEL_BLOCK_DEVICE_NAME')
+    (options, args) = p.parse_args(args)
+    try:
+        (dev_name,) = args
+    except ValueError:
+        p.print_usage()
+        sys.stderr.write('Current disks:\n')
+        for (name, proc_name, vendor, model, size, hbtl) in disk_list():
+            sys.stderr.write('%s\t%s\t%s\t%s\t%s\t[%d:%d:%d:%d]\n' %
+                             ((name, proc_name, vendor, model, size) + hbtl))
+        sys.exit(2)
+
+    hbtl = host_bus_target_lun_from_name(dev_name)
+    delete_fname = ('/sys/bus/scsi/devices/'
+                    '%(host)d:%(bus)d:%(target)d:%(lun)d/block/'
+                    '%(name)s/device/delete' %
+                    dict(host=hbtl[0], bus=hbtl[1], target=hbtl[2], lun=hbtl[3], name=dev_name))
+    with open(delete_fname, 'w') as f:
+        f.write('1')
+    
+def main_function_dispatch(name, args):
+    try:
+        f = main_function_map[name]
+    except KeyError:
+        sys.stderr.write('%s is not a valid command name\n' % (name,))
+        sys.exit(2)
+    f(args)
+
+def program_name():
+    return os.path.basename(sys.argv[0])
+
+if __name__ == '__main__':
+    main_function_dispatch(program_name(), sys.argv[1:])
