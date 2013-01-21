@@ -1,3 +1,51 @@
-#!/bin/sh
-LOG_FILE=/var/log/yum.log
-sudo vim -R -S $HOME/bin/yum_update_log.vim $LOG_FILE "+$(sudo cat $LOG_FILE | wc -l)"
+#!/usr/bin/env python
+
+# Review the update log from yum in a VIM based, split window interactive UI.
+# Shows RPM changelog, files, provides, requires.
+# See yum_update_log.vim for the key bindings.
+
+# Installation:
+# 1. Put yum_update_log.vim in the same directory as this cript 
+#    or use the '--vim-script' option.
+# 2. Setup 'sudo' privileges.
+
+# usage: yupdate-review [ YUM.LOG ]
+
+import sys
+import os
+import optparse
+import tempfile
+import subprocess
+
+def program_name():
+    return os.path.basename(sys.argv[0])
+
+def print_usage_exit():
+    sys.stderr.write('usage: %s [YUM_LOG_FILE]\n' % (program_name(),))
+    sys.exit(2)
+
+def main(args):
+    bin_dir = os.path.dirname(sys.argv[0])
+    op = optparse.OptionParser(option_list=[
+        optparse.Option('--vim-script', default=os.path.join(bin_dir, 'yum_update_log.vim')),
+    ])
+    (options, args) = op.parse_args(args)
+
+    if len(args) == 0:
+        yum_log_filename = '/var/log/yum.log'
+    elif len(args) == 1:
+        yum_log_filename = args[0]
+    else:
+        print_usage_exit()
+
+    # TODO: don't run vim under sudo.
+    # Run 'yum_log_open()' in a privileged process and pass the fd back instead.
+    tf = tempfile.TemporaryFile(mode='w+')
+    subprocess.check_call(['sudo', 'wc', '-l', yum_log_filename], stdout=tf)
+    tf.seek(0)
+    l = int(tf.read().split()[0])
+    subprocess.check_call(['sudo', 'vim', '-R', '-S', options.vim_script,
+                           yum_log_filename, '+%d' % (l,)])
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
