@@ -1,9 +1,17 @@
 #!/usr/bin/env python
 
+# Start a new nested X11 session
+
+# usage:
+# $ xnest --client=twm
+# $ xnest --client=xterm
+
 import sys
 import os
 import optparse
 import subprocess
+
+DEBUG = 0
 
 def which(program_name):
     p = subprocess.Popen(['which', program_name], stdout=subprocess.PIPE)
@@ -20,8 +28,10 @@ def main(args):
     ])
 
     (options, args) = op.parse_args(args)
-    subprocess.check_call(['startx', which(options.client), '--', which(options.server),
-                          options.display])
+    cmd = ['xinit', which(options.client), '--', which(options.server), options.display]
+    if DEBUG:
+        sys.stderr.write('%r\n' % (cmd,))
+    subprocess.check_call(cmd)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
