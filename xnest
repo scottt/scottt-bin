@@ -6,32 +6,58 @@
 # $ xnest --client=twm
 # $ xnest --client=xterm
 
+# TODO: run a nested gnome session as a different user
+# adduser newuser
+# su - newuser
+# xauth add < ... display proto key copied from "xauth list" ... >
+# export DISPLAY= < display from old user >
+# check $XDG_RUNTIME_DIR has write and execute permission otherwise unset the envvar
+# xnest --client=gnome-shell
+# NOTE: GL doesn't work in upstream Xephyr yet, see http://gitorious.org/xephyr-with-gl-acceleration
+# userdel --remove --selinux-user --force newuser
+
 import sys
 import os
 import optparse
 import subprocess
 
-DEBUG = 0
+def program_name():
+    return os.path.basename(sys.argv[0])
 
-def which(program_name):
-    p = subprocess.Popen(['which', program_name], stdout=subprocess.PIPE)
+def which(program):
+    p = subprocess.Popen(['which', program], stdout=subprocess.PIPE)
     d = p.stdout.read()[:-1] # strip '\n'
     if p.wait() != 0:
-        raise ValueError('which: "%s" failed' % (program_name,))
+        raise ValueError('which: "%s" failed' % (program,))
     return d
 
 def main(args):
     op = optparse.OptionParser(option_list = [
-        optparse.Option('--client', default='metacity', help='X Client program to run'),
-        optparse.Option('--server', default='Xnest', help='X Server executable (ex: X, Xnest ...)'),
+        optparse.Option('--client', default='xterm', help='X Client program to run'),
+        optparse.Option('--server', default='Xephyr', help='X Server executable (ex: X, Xnest ...)'),
         optparse.Option('--display', default=':1', help='new X Server display number (ex: :1, :2)'),
+        optparse.Option('-r', '--resolution', default=None, help='nested X resolution'),
+        optparse.Option('--just-print', action='store_true', help='just print the command that'
+                        ' invokes the X server and clients'),
     ])
 
     (options, args) = op.parse_args(args)
+
     cmd = ['xinit', which(options.client), '--', which(options.server), options.display]
-    if DEBUG:
+    if options.resolution is not None:
+        s = options.server
+        if s.endswith('Xnest'):
+            cmd.extend(['-geometry', options.resolution])
+        elif s.endswith('Xephyr'):
+            cmd.extend(['-screen', options.resolution])
+        else:
+            sys.stderr.write("%s: don't know how to set resolution for server %r. "
+                             "Ignoring --resolution." % (program_name(),))
+
+    if options.just_print:
         sys.stderr.write('%r\n' % (cmd,))
-    subprocess.check_call(cmd)
+    else:
+        subprocess.check_call(cmd)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
