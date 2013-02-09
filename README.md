@@ -28,8 +28,8 @@ Python
 Command Line / Shell Scripting
 ===
 
-* clipboard -- print X11 clipboard to STDOUT
-* clipboard-primary -- print X11 middle button paste clipboard ('PRIMARY') to STDOUT
+* clipboard-print -- print X11 clipboard to STDOUT
+* clipboard-copy -- copy file content to X11 clipboard
 * clipboard-open-file-line -- open $EDITOR to filename:line in X11 clipboard
 * argv-print -- debug command line argument passing in scripts
 * realpath -- like realpath(3), recent GNU coreutils now ships a realpath binary

@@ -1,0 +1,90 @@
+#!/usr/bin/env python
+
+import sys
+import os
+import subprocess
+import optparse
+
+import pygtk
+pygtk.require('2.0')
+import gtk
+
+def program_name():
+    return os.path.basename(sys.argv[0])
+
+def clipboard_get_text(selection):
+    'return textual data from the X11 clipboard. @selection should be "PRIMARY" or "CLIPBOARD"'
+    clipboard = gtk.Clipboard(selection=selection)
+    return clipboard.wait_for_text()
+
+def clipboard_set_text(text, selection):
+    clipboard = gtk.Clipboard(selection=selection)
+    clipboard.set_text(text)
+    # make the data stick around after this process exits
+    clipboard.store()
+
+main_function_list = []
+
+def main_function(func):
+    global main_function_list
+    main_function_list.append(func)
+    return func
+
+@main_function
+def clipboard_print(args):
+    op = optparse.OptionParser(option_list=[
+        optparse.Option('-p', '--primary', action='store_true',
+                        help=('use PRIMARY instead of CLIPBOARD as the X11 selection.\n'
+                              'PRIMARY usually contains the currently selected text.')),
+        optparse.Option('-n', '--no-newline', action='store_true', help="don't add newline"),
+    ])
+    (options, args) = op.parse_args(args)
+    if options.primary:
+        s = 'PRIMARY'
+    else:
+        s = 'CLIPBOARD'
+    sys.stdout.write(clipboard_get_text(s))
+    if not options.no_newline:
+        sys.stdout.write('\n')
+
+@main_function
+def clipboard_copy(args):
+    'copy file to clipboard'
+    op = optparse.OptionParser(usage='usage: %prog FILE', option_list=[
+        optparse.Option('-p', '--primary', action='store_true',
+                        help='use PRIMARY instead of CLIPBOARD as the X11 selection'),
+    ])
+    (options, args) = op.parse_args(args)
+    try:
+        (filename,) = args
+    except ValueError:
+        op.print_usage()
+        sys.exit(2)
+
+    if options.primary:
+        s = 'PRIMARY'
+    else:
+        s = 'CLIPBOARD'
+    clipboard_set_text(open(filename).read(), selection=s)
+
+@main_function
+def clipboard_open_file_line(args):
+    'assume input in "filename:line" (ie. grep) format, open in editor'
+    (filename, line) = clipboard_get_text('PRIMARY').strip().split(':')
+
+    editor_cmd = os.environ.get('VISUAL')
+    if editor_cmd is None:
+        editor_cmd = os.environ.get('EDITOR', 'vim')
+    # FIXME: not all editors handle "filename +line" cmd line
+    return subprocess.call([ editor_cmd, filename, '+%s' % line ])
+
+def main(args):
+    def to_command_name(s):
+        return s.replace('_', '-')
+
+    name_to_function = dict( (to_command_name(x.__name__), x)
+                            for x in main_function_list )
+    return name_to_function[program_name()](args)
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
