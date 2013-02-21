@@ -86,9 +86,12 @@ Fedora / RHEL Related
 * yum_update_log.vim  -- part of yupdate-review
 * fedora-source-query -- query Fedora build dependencies
 * src-install -- install the source for a file that comes with the OS
+* yum-febootstrap -- create chroots from Fedora repositories with yum
+* graphics-stack-versions -- list Linux graphics stack component versions on the running system
 
 Audio / Video Encoding and Conversion
 ===
+
 * ffmpeg-webm-360p -- convert video to the WebM format through ffmpeg
 * flv-to-mp3 -- covnert audio tracks in FLV to an MP3
 * pulseaudio-rtp-serve -- broadcast audio from Linux through RTP in PCM or MP3 format
@@ -108,3 +111,4 @@ Miscellaneous
 * sine-wave-audio -- play a test sound pattern
 * vm-start -- manage virtual machines through "virsh"
 * xnest -- start a nested Xnest server through startx
+* document-files-in-README -- help maintain this README
