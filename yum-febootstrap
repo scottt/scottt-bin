@@ -1,5 +1,12 @@
 #!/usr/bin/env python
 
+# Create chroots from Fedora repositories with yum
+# Usage: yum-febootstrap [OPTIONS] INSTALL_ROOT [EXTRA_PACKAGES]
+# e.g.
+# $ sudo ./yum-febootstrap -r 18 -a i386 OUT_DIR
+#
+# requires root privileges
+
 import sys
 import os
 import re
