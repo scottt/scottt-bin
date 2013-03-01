@@ -45,16 +45,13 @@ Command Line / Shell Scripting
 * zip-dir -- zip up a directory
 * slice -- print a subset of lines from STDIN like head(1) or tail(1)
 * vim-pager -- use vim as a pager like more(1)
+* xdg-rename-by-content -- change file extension to match file type detected from content
 
 System Administration
 ===
 
-* iptables-allow-daap -- open port(s) with iptables
-* iptables-allow-http
-* iptables-allow-mdns
-* iptables-allow-nfsv4
-* iptables-allow-samba
-* iptables-allow-ssh
+* iptables-allow-{daap,http,mdns,nfsv4,samba,ssh} -- open port(s) with iptables
+* iptables-reject-hinet-youtube-servers -- workaround to get faster YouTube connections in Taiwan
 * ntp-sync -- sync system time through NTP
 * disk-{scan,deactivate} -- useful for eSATA hotplug. Nicer than scsi-rescan in sg3_utils.
 
