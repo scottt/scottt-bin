@@ -1,0 +1,5 @@
+#!/bin/sh
+
+# Useful for getting faster YouTube connections in Taiwan, see:
+# http://blog.gslin.org/archives/2013/03/01/3227/hinet-%E8%AE%93-youtube-%E8%AE%8A%E5%BF%AB%E7%9A%84%E6%96%B9%E6%B3%95%EF%BC%9A%E6%93%8B%E6%8E%89-210-71-222-024/
+iptables -A OUTPUT -d 210.71.222.0/24 -j REJECT
