@@ -22,7 +22,7 @@ import argparse
 import subprocess
 
 def main(args):
-    op = argparse.ArgumentParser(usage='usage: %(prog)s (--requires | --whatrequires) PKG [PKG ...]')
+    op = argparse.ArgumentParser(usage='%(prog)s (--requires | --whatrequires) PKG [PKG ...]')
     op.add_argument('-r', '--rawhide', action='store_true')
     (options, args) = op.parse_known_args(args)
     if not args:
