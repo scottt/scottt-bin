@@ -2,8 +2,8 @@
 
 import subprocess
 
-# For streaming video clips from http://www.bloomberg.com/video
-# "LIVE TV" seems to route differently
+# For streaming video clips from http://www.bloomberg.com/video from Taipei using
+# a Hinet DSL connection. "LIVE TV" seems to route differently
 
 # Bad: mtr a23-59-6-218.deploy.akamaitechnologies.com
 #
