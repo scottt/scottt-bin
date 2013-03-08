@@ -1,5 +1,32 @@
 #!/usr/bin/env python
 
+USAGE = '''rpmbuild-in-dir [RPMBUILD_OPTIONS] SPEC
+
+rpmbuild by default wants its input files placed in a very peculiar
+directory structure, i.e. %_topdir/{SPECS,SOURCES}/.
+This script wraps rpmbuild(8) and makes it read all input
+and place all output under the current working directory.
+It takes the same options as rpmbuild(8).
+'''
+
+# Sample usage:
+# $ ls
+# zsh-5.0.2.tar.bz2 zsh.spec X.patch ...
+
+# $ rpmbuild-in-dir -bp zsh.spec # prepare source tree
+
+# $ rpmbuild-in-dir --short-ciruit -bc zsh.spec # run "%build" stage
+
+# $ rpmbuild-in-dir zsh.spec # run all build stabes, same as '-ba'
+# Output would be in $PWD/{RPMS,SRPMS}
+
+
+# See rpmdev-setuptree and
+# http://fedoraproject.org/wiki/How_to_create_an_RPM_package
+# for the traditional directory structure setup.
+# This scripts makes running rpmdev-setuptree unnecessary but it doesn't hurt
+# either.
+
 import sys
 import os
 import subprocess
@@ -29,6 +56,10 @@ def rpmspec_in_dir(args):
 
 @main_function
 def rpmbuild_in_dir(args):
+    # assume desired action is '-ba' if only a SPEC file is passed
+    if (not args) or ('-h' in args) or ('--help' in args):
+        sys.stderr.write(USAGE)
+        sys.exit(2)
     if len(args) == 1 and args[0].endswith('.spec'):
         args = ['-ba'] + args
     r = rpm_op_in_dir('rpmbuild', os.getcwd(), args)
