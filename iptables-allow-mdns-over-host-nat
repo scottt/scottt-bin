@@ -2,7 +2,10 @@
 
 # libvirt at least up to 0.10 has a bug with mDNS over the NAT it sets up
 # See https://bugzilla.redhat.com/show_bug.cgi?id=657918
-# This allows mDNS among libvirt guests and host
+# Symptom in syslog:
+# avahi-daemon[692]: Received response from host 192.168.122.1 with invalid source port 1024 on interface 'virbr0.0'
+
+# This allows mDNS among libvirt guests and host.
 
 # Add rule from https://bugzilla.redhat.com/attachment.cgi?id=661710&action=diff
 iptables -t nat -I POSTROUTING 1 -d 224.0.0.0/4 -j RETURN
