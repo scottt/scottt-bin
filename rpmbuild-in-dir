@@ -13,13 +13,12 @@ It takes the same options as rpmbuild(8).
 # $ ls
 # zsh-5.0.2.tar.bz2 zsh.spec X.patch ...
 
-# $ rpmbuild-in-dir -bp zsh.spec # prepare source tree
+# $ rpmbuild-in-dir --nodeps -bp zsh.spec # prep source tree, ignore build deps
 
 # $ rpmbuild-in-dir --short-ciruit -bc zsh.spec # run "%build" stage
 
 # $ rpmbuild-in-dir zsh.spec # run all build stabes, same as '-ba'
 # Output would be in $PWD/{RPMS,SRPMS}
-
 
 # See rpmdev-setuptree and
 # http://fedoraproject.org/wiki/How_to_create_an_RPM_package
