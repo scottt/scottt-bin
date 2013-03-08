@@ -23,7 +23,7 @@ It takes the same options as rpmbuild(8).
 # See rpmdev-setuptree and
 # http://fedoraproject.org/wiki/How_to_create_an_RPM_package
 # for the traditional directory structure setup.
-# This scripts makes running rpmdev-setuptree unnecessary but it doesn't hurt
+# This script makes running rpmdev-setuptree unnecessary but it doesn't hurt
 # either.
 
 import sys
