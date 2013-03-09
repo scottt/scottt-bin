@@ -2,14 +2,14 @@
 # -*- coding: utf8 -*-
 # vim: filetype=python
 
-# Convert Python traceback printout to grep's file:line format.
-# This can be used to jump to those source locations with some programmer's editors.
+# Convert Python traceback format to grep's file:line format.
+# This can be used to jump to those source locations with many programmer's editors.
 # For example, with Vim:
 # $ pybacktrace-to-grep TRACEBACK > l
 # $ vim
-# :set grepprg=cat\ l
-# :grep
-# :copen
+# :lfile l
+# :lopen
+# See also: lnext, lprev, lnewer, lolder, lclose in VIM
 
 import sys
 import os

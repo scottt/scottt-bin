@@ -1,6 +1,8 @@
 Scott Tsai's Collection of Utilities and Scripts
 =
 
+This is pretty much a dump of my $HOME/bin.
+
 C/C++
 ===
 
@@ -23,7 +25,7 @@ Python
 ===
 
 * pyindent -- a copy of cpython/Tools/scripts/reindent.py
-* pytraceback-to-grep -- convert Python traceback back to file:line format
+* pytraceback-to-grep -- convert Python traceback to a file:line format similar to grep
 
 Command Line / Shell Scripting
 ===
@@ -51,7 +53,9 @@ System Administration
 ===
 
 * iptables-allow-{daap,http,mdns,nfsv4,samba,ssh} -- open port(s) with iptables
+* iptables-allow-mdns-over-host-nat -- allow mDNS (avahi) over host NAT mostly for libvirt VMs.
 * iptables-reject-hinet-youtube-servers -- workaround to get faster YouTube connections in Taiwan
+* iptables-reject-slow-akaimai-bloomberg-tv -- workaround for watching bloomberg.com/tv in Taiwan
 * ntp-sync -- sync system time through NTP
 * disk-{scan,deactivate} -- useful for eSATA hotplug. Nicer than scsi-rescan in sg3_utils.
 
