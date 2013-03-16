@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-# Change file extension to match the file type detected from content
+# Change file extension to match the file type detected from content.
+# This is useful after using an undelete program to recover files for example.
 
 # usage:
 # $ xdg-rename-by-content FILE [...]
@@ -19,6 +20,9 @@ if get_extensions is not None:
         # and we'll have to handle those case by case
         if m == xdg.Mime.lookup('image/jpeg'):
             return 'jpg'
+        elif m == xdg.Mime.lookup('text/x-python'):
+            # 'text-x-python' -> ['.wsgi', 'py']
+            return 'py'
         l = list(get_extensions(m))
         if l:
             return max(l, key=lambda x: len(x))
