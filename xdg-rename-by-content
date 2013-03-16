@@ -3,23 +3,40 @@
 # Change file extension to match the file type detected from content
 
 # usage:
-# $ xdg-rename-by-content FILE
+# $ xdg-rename-by-content FILE [...]
 
 import sys
 import os
 
 import xdg.Mime
 
-if not xdg.Mime.exts:
-    xdg.Mime.get_type_by_name('') # loads xdg.Mime.exts
-    assert(xdg.Mime.exts)
-mime_to_ext = dict( (m,e) for (e,m) in xdg.Mime.exts.iteritems() )
+# xdg >= 1.0 has xdg.Mime.get_extensions()
+get_extensions = getattr(xdg.Mime, 'get_extensions', None)
+if get_extensions is not None:
+    def mime_ext(m):
+        # Prefer longest extension, e.g. 'html' over 'htm'
+        # but 'image/jpeg' -> ['jfif', 'jpe', 'jpg', 'jpeg']
+        # and we'll have to handle those case by case
+        if m == xdg.Mime.lookup('image/jpeg'):
+            return 'jpg'
+        l = list(get_extensions(m))
+        if l:
+            return max(l, key=lambda x: len(x))
+        else:
+            return None
+else:
+    if not xdg.Mime.exts:
+        xdg.Mime.get_type_by_name('') # loads xdg.Mime.exts
+        assert(xdg.Mime.exts)
+    mime_to_ext = dict( (m,e) for (e,m) in xdg.Mime.exts.iteritems() )
+    def mime_ext(m):
+        return mime_to_ext.get(m, None)
 
 def rename_by_content(path):
     m = xdg.Mime.get_type_by_contents(path)
     if xdg.Mime.get_type_by_name(path) != m:
-        ext = mime_to_ext.get(m, None)
-        if not ext:
+        ext = mime_ext(m)
+        if ext is None:
             return
         os.rename(path, os.path.splitext(path)[0] + '.' + ext)
 
