@@ -21,7 +21,7 @@ if get_extensions is not None:
         if m == xdg.Mime.lookup('image/jpeg'):
             return 'jpg'
         elif m == xdg.Mime.lookup('text/x-python'):
-            # 'text-x-python' -> ['.wsgi', 'py']
+            # 'text/x-python' -> ['.wsgi', 'py']
             return 'py'
         l = list(get_extensions(m))
         if l:
