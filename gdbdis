@@ -131,6 +131,22 @@ $ gdbx /bin/true 0x4039e4 4c
     else:
         gdb.execute('x/%(fmt)s %(addr)s' % dict(fmt=fmt, addr=addr))
 
+@main_function
+def gdb_info_scope(args):
+    usage = '''%prog EXECUTABLE FUNCTION
+Use gdb to list the variables local to a scope.
+Shows DWARF debug info.
+'''
+    p = optparse.OptionParser(usage=usage)
+    (options, args) = p.parse_args(args)
+    if len(args) == 2:
+        (exe, name) = args
+    else:
+        p.print_help()
+        sys.exit(2)
+    gdb.execute('file %s' % (exe,))
+    gdb.execute('info scope ' + name)
+
 def main_function_dispatch(name, args):
     try:
         f = main_function_map[name]
