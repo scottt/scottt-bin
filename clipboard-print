@@ -58,7 +58,7 @@ def clipboard_copy(args):
     try:
         (filename,) = args
     except ValueError:
-        op.print_usage()
+        op.print_usage(sys.stderr)
         sys.exit(2)
 
     if options.primary:
