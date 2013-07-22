@@ -10,6 +10,7 @@
 #         0x4039e4 <__dso_handle+732>:   "GNU coreutils"
 
 import sys
+import os
 import optparse
 
 import gdb
