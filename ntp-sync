@@ -1,5 +1,5 @@
 #!/bin/sh
 
 # synchronize computer time with a trusted source on the internet
-#ntp.nasa.govia
-sudo ntpdate -s ntp.pool.org
+#ntp.nasa.gov
+sudo ntpdate -s ntp.nasa.gov
