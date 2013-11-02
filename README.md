@@ -11,6 +11,7 @@ C/C++
 * compilefunc -- generate assembler output on STDOUT for specified functions
 * gdbdis -- disassmble a function or memory range through GDB
 * gdbx -- examine memory through GDB
+* gdb-info-scope -- Use gdb to list the variables local to a scope.  Shows DWARF debug info.
 * function-is-not-used
 
 Software Development
@@ -58,6 +59,7 @@ System Administration
 * iptables-reject-slow-akaimai-bloomberg-tv -- workaround for watching bloomberg.com/tv in Taiwan
 * ntp-sync -- sync system time through NTP
 * disk-{scan,deactivate} -- useful for eSATA hotplug. Nicer than scsi-rescan in sg3_utils.
+* git-repo-add-email-notifications -- configures email notification in git repositories.
 
 Text Encoding Conversion
 ===

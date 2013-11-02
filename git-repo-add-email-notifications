@@ -1,0 +1,52 @@
+#!/usr/bin/env python
+
+# Configures email notification in git repositories.
+# Requires:
+# 1. Path to git_multimail.py from 'contrib/hooks/multimail' in the git source code
+# (https://github.com/mhagger/git-multimail)
+# 2. '/usr/sbin/sendmail' is configured properly to send emails
+
+# e.g.
+# Enable email notifications for '*.git/'
+# $ repo-add-email-notifications -a -e 'xxx@my-email.com'
+#
+# Enable email notifications for one repo
+# $ repo-add-email-notifications -e 'xxx@my-email.com MY-REPO.git
+
+import sys
+import os
+import glob
+import subprocess
+import optparse
+
+developer_emails = [
+        'i@example.com',
+]
+
+git_multimail_path = os.path.expanduser('~/git-multimail/git-multimail/git_multimail.py')
+
+def main(args):
+    p = optparse.OptionParser(usage='%prog [OPTIONS] REPO [REPO]...', option_list=[
+            optparse.Option('-a', '--all', action='store_true', default=False,
+                            help='install email hook in all bare repos (*.git) in current directory'),
+            optparse.Option('-e', '--emails', default=comma_separated_str(developer_emails),
+                           help='initial list of comma separated email addresses'),
+    ])
+    (options, args) = p.parse_args(args)
+    if options.all:
+        args = glob.glob('*.git')
+
+    if not args:
+        p.print_help()
+        sys.exit(2)
+
+    for i in args:
+        if not os.path.isdir(i):
+            sys.stderr.write('"%s" is not a repo, ignoring\n' % (i,))
+            continue
+        subprocess.check_call(['ln', '-sf', git_multimail_path, os.path.join(i, 'hooks', 'post-receive')])
+        subprocess.check_call(['git', 'config', 'multimailhook.mailinglist', ', '.join(developer_emails)],
+                cwd=i)
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
