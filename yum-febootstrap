@@ -36,12 +36,25 @@ gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-fedora-{basearch}
 
 '''
 
-def main(args):
+def canonicalize_arch(arch):
+    # TODO: map arm to 'armhfp' or 'arm'
+    if re.match(r'i.86', arch):
+        return 'i386'
+    return arch
+
+main_function_map = {}
+
+def main_function(func):
+    global main_function_map
+    main_function_map[func.__name__.replace('_','-')] = func
+
+@main_function
+def yum_febootstrap(args):
     op = optparse.OptionParser(usage='usage: %prog [OPTIONS] INSTALL_ROOT [EXTRA_PACKAGES]',
                                option_list=[
         optparse.Option('-r', '--releasever', default=None, help='Fedora release to install, e.g. 18'),
         optparse.Option('--distroverpkg', default='fedora-release',
-                        help='Used to determine the default releasever when'),
+                        help='Used to determine the default releasever'),
         optparse.Option('-a', '--arch', default=None, help='x86_64, i386, armhfp etc'),
         optparse.Option('-d', '--debug', action='store_true', help='enable debug logging'),
     ])
@@ -69,11 +82,7 @@ def main(args):
     logging.debug('releasever: %s' % (options.releasever))
 
     if options.arch is None:
-        options.arch = os.uname()[4]
-        if re.match(r'i.86', options.arch):
-            options.arch = i386
-        # map arm to 'armhfp' or 'arm'
-
+        options.arch = canonicalize_arch(os.uname()[4])
     logging.debug('arch: %s' % (options.arch))
 
     #CRITICAL:yum.cli:--installroot must be an absolute path: t
@@ -91,5 +100,80 @@ def main(args):
     logging.debug(cmd)
     subprocess.check_call(cmd)
 
+@main_function
+def yinchroot(args):
+    #TODO: @arch and @releasever from INSTALL_ROOT
+    op = optparse.OptionParser(usage='usage: %prog [OPTIONS] INSTALL_ROOT PACKAGE [PACKAGE]...',
+                               option_list=[
+        optparse.Option('-r', '--releasever', default=None, help='Fedora release to install, e.g. 18'),
+        optparse.Option('--distroverpkg', default='fedora-release',
+                        help='Used to determine the default releasever'),
+        optparse.Option('-a', '--arch', default=None, help='x86_64, i386, armhfp etc'),
+        optparse.Option('-d', '--debug', action='store_true', help='enable debug logging'),
+    ])
+
+    (options, args) = op.parse_args(args)
+    if options.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+
+    if len(args) < 1:
+        op.print_usage()
+        sys.exit(2)
+
+    try:
+        (install_root, packages) = (args[0], args[1:])
+    except IndexError:
+        op.print_usage()
+        sys.stderr.write('%s: INSTALL_ROOT not specified\n' % (program_name(),))
+        sys.exit(2)
+
+    if not packages:
+        op.print_usage()
+        sys.stderr.write('%s: no PACKAGE specified\n' % (program_name(),))
+        sys.exit(2)
+    elif not os.path.isdir(install_root):
+        op.print_usage()
+        sys.stderr.write('%s: specified INSTALL_ROOT is not a directory\n' % (program_name(),))
+        sys.exit(2)
+
+    if options.releasever is None:
+        tf0 = tempfile.TemporaryFile(mode='w+')
+        subprocess.check_call(['rpmquery', '--queryformat', '%{version}', options.distroverpkg],
+                              stdout=tf0)
+        tf0.seek(0)
+        options.releasever = tf0.read()
+    logging.debug('releasever: %s' % (options.releasever))
+
+    if options.arch is None:
+        options.arch = canonicalize_arch(os.uname()[4])
+    logging.debug('arch: %s' % (options.arch))
+
+    #CRITICAL:yum.cli:--installroot must be an absolute path: t
+    install_root = os.path.realpath(install_root)
+
+    tf = tempfile.NamedTemporaryFile(mode='w+')
+    tf.write(yum_config_template.format(basearch=options.arch))
+    tf.seek(0)
+    cmd = ['yum',
+           '--config', tf.name,
+           '--releasever', options.releasever,
+           'install', '--assumeyes', '--skip-broken', '--nogpgcheck', '--installroot', install_root,
+          ] + packages
+    logging.debug(cmd)
+    subprocess.check_call(cmd)
+
+#TODO: write yum-builddep-chroot
+
+def main_function_dispatch(name, args):
+    try:
+        f = main_function_map[name]
+    except KeyError:
+        sys.stderr.write('%s is not a valid command name\n' % (name,))
+        sys.exit(2)
+    f(args)
+
+def program_name():
+    return os.path.basename(sys.argv[0])
+
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main_function_dispatch(program_name(), sys.argv[1:])

@@ -88,6 +88,7 @@ Fedora / RHEL Related
 * fedora-source-query -- query Fedora build dependencies
 * src-install -- install the source for a file that comes with the OS
 * yum-febootstrap -- create chroots from Fedora repositories with yum
+* yinchroot -- install package(s) in chroot
 * graphics-stack-versions -- list Linux graphics stack component versions on the running system
 
 Audio / Video Encoding and Conversion
