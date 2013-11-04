@@ -18,21 +18,52 @@ import os
 import glob
 import subprocess
 import optparse
+import ConfigParser
 
-developer_emails = [
-        'i@example.com',
-]
+def program_name():
+    return os.path.basename(sys.argv[0])
 
-git_multimail_path = os.path.expanduser('~/git-multimail/git-multimail/git_multimail.py')
+SAMPLE_CONFIG = '''
+# NOTE: these are only used as the _DEFAULTS_ for git-repo-add-email-notifications
+# See $REPO.git/config for the actual configured email addresses
+
+[emails]
+i@earth.org
+# scottt.tw@gmail.com
+'''
 
 def main(args):
     p = optparse.OptionParser(usage='%prog [OPTIONS] REPO [REPO]...', option_list=[
             optparse.Option('-a', '--all', action='store_true', default=False,
                             help='install email hook in all bare repos (*.git) in current directory'),
-            optparse.Option('-e', '--emails', default=comma_separated_str(developer_emails),
+            optparse.Option('-e', '--emails', default=None,
                            help='initial list of comma separated email addresses'),
+            optparse.Option('-c', '--config', default='emails.ini',
+                           help='read email addresses from INI file'),
+            optparse.Option('--git-multimail-path',
+                            default=os.path.expanduser(
+                                '~/git-multimail/git-multimail/git_multimail.py'),
+                           help=('path to git_multiimail.py from '
+                                 '"congrib/hooks/multimail" in git source')),
     ])
     (options, args) = p.parse_args(args)
+
+    if options.emails is not None:
+        emails = [ x for x in options.emails.split(',') ]
+    else:
+        try:
+            config_file = open(options.config)
+        except IOError:
+            sys.stderr.write('%s: write a "emails.ini" file like below or pass "--emails"\n'
+                             % (program_name(),))
+            sys.stderr.write(SAMPLE_CONFIG)
+            sys.exit(2)
+
+        with config_file:
+            config = ConfigParser.RawConfigParser(allow_no_value=True)
+            config.readfp(config_file)
+            emails = config.options('emails')
+
     if options.all:
         args = glob.glob('*.git')
 
@@ -44,8 +75,9 @@ def main(args):
         if not os.path.isdir(i):
             sys.stderr.write('"%s" is not a repo, ignoring\n' % (i,))
             continue
-        subprocess.check_call(['ln', '-sf', git_multimail_path, os.path.join(i, 'hooks', 'post-receive')])
-        subprocess.check_call(['git', 'config', 'multimailhook.mailinglist', ', '.join(developer_emails)],
+        subprocess.check_call(['ln', '-sf', options.git_multimail_path,
+                               os.path.join(i, 'hooks', 'post-receive')])
+        subprocess.check_call(['git', 'config', 'multimailhook.mailinglist', ', '.join(emails)],
                 cwd=i)
 
 if __name__ == '__main__':
