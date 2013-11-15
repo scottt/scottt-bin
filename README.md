@@ -22,6 +22,10 @@ Software Development
 * lsof-udp -- list programs bound to UDP ports
 * http-static-server -- HTTP server that serves static content in CWD
 
+Django
+===
+* django-secret-key-gen -- generate random SECRET_KEY for settings.py
+
 Python
 ===
 
