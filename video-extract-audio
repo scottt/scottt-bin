@@ -1,0 +1,40 @@
+#!/usr/bin/env python
+
+# Extract only the audio streams from video files
+#$ video-extract-audio FILE [FILE...]
+
+import sys
+import os
+import subprocess
+
+def video_leave_audio(filename):
+    # Outline for reasonable implementation
+    # Detect audio streams in file
+    # $ ffmpeg -i INPUT-FILE
+
+    # Copy audio streams to output, filename extension from herustic
+    # keep A/V container format
+    # $ ffmpeg -i INPUT-FILE -map 0:1 -acodec copy OUTPUT-FILE
+
+    # Preserve metadata if possible
+
+    if filename.endswith('.mp4'):
+        new_ext = '.m4a'
+    else:
+        new_ext = '.UNKNOWN-FORMAT'
+    out_filename = os.path.splitext(filename)[0] + new_ext
+
+    # FIXME: hardcoding for youtube-dl
+    file_stream = '0:1' # 2nd stream of 1st file
+    subprocess.check_call(['ffmpeg',
+                           '-i', filename,
+                           '-map', file_stream,
+                           '-acodec', 'copy',
+                           out_filename])
+
+def main(args):
+    for i in args:
+        video_leave_audio(i)
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
