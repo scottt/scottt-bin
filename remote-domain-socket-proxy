@@ -1,0 +1,62 @@
+#!/usr/bin/env python
+
+#$ remote-domain-socket-proxy REMOTE_HOST REMOTE_SOCKET_PATH
+#
+# Start listening on a local domain socket that would actually connect to a 
+# domain socket on a remote machine, e.g:
+#$ remote-domain-socket-proxy MY-SERVER /var/lib/mysql/mysql.sock
+
+# Connections to ~/sockets/MY-SERVER.mysql.sock
+# will now be proxyed to the remote host.
+
+# Requires socat and ssh to be available on the remote and local side.
+
+import sys
+import os
+import optparse
+import subprocess
+import errno
+
+def make_dirs(path):
+    try:
+        os.makedirs(path)
+    except OSError, e:
+        if e.errno != errno.EEXIST:
+            raise
+
+def unlink(path):
+    try:
+        os.unlink(path)
+    except OSError, e:
+        if e.errno != errno.ENOENT:
+            raise
+
+def main(args):
+    op = optparse.OptionParser(usage='%prog REMOTE_HOST REMOTE_SOCKET_PATH', option_list=[
+        optparse.Option('--local-socket-dir', default=os.path.expanduser('~/sockets')),
+                       ])
+
+    (options, args) = op.parse_args(args)
+    try:
+        (remote_host, remote_socket_path) = args
+    except ValueError:
+        op.print_usage()
+        sys.exit(2)
+
+    socket_dir = options.local_socket_dir
+    socket_path = os.path.basename(remote_socket_path)
+
+    make_dirs(socket_dir)
+    local_socket_path = os.path.join(socket_dir, '%(remote_host)s.%(socket_path)s' % locals())
+    unlink(local_socket_path)
+    try:
+        subprocess.check_call(['socat',
+                               'UNIX-LISTEN:"%(local_socket_path)s",reuseaddr,fork' % locals(),
+                               'EXEC:ssh "%(remote_host)s" socat STDIO UNIX-CONNECT\:%(remote_socket_path)s' % locals()])
+    except KeyboardInterrupt:
+        pass
+    finally:
+        unlink(local_socket_path)
+
+if __name__ == '__main__':
+        main(sys.argv[1:])
