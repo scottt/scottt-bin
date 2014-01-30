@@ -1,13 +1,11 @@
-Scott Tsai's Collection of Utilities and Scripts
+Scott Tsai's $HOME/bin
 =
-
-This is pretty much a dump of my $HOME/bin.
 
 C/C++
 ===
 
 * cc-defines -- dump gcc's builtin macro definitions
-* cc-config -- dump gcc's build configuration
+* cc-config -- dump gcc's build configuration. Useful when cross compiling.
 * compilefunc -- generate assembler output on STDOUT for specified functions
 * gdbdis -- disassmble a function or memory range through GDB
 * gdbx -- examine memory through GDB
@@ -22,15 +20,15 @@ Software Development
 * lsof-udp -- list programs bound to UDP ports
 * http-static-server -- HTTP server that serves static content in CWD
 
-Django
-===
-* django-secret-key-gen -- generate random SECRET_KEY for settings.py
-
 Python
 ===
 
 * pyindent -- a copy of cpython/Tools/scripts/reindent.py
 * pytraceback-to-grep -- convert Python traceback to a file:line format similar to grep
+
+Django
+===
+* django-secret-key-gen -- generate random SECRET_KEY for settings.py
 
 Command Line / Shell Scripting
 ===
@@ -57,6 +55,8 @@ Command Line / Shell Scripting
 System Administration
 ===
 
+* remote-domain-socket-proxy -- connect to a remote Unix domain socket through a local one.
+  e.g. MySQL remote administration.
 * iptables-allow-{daap,http,mdns,nfsv4,samba,ssh} -- open port(s) with iptables
 * iptables-allow-mdns-over-host-nat -- allow mDNS (avahi) over host NAT mostly for libvirt VMs.
 * iptables-reject-hinet-youtube-servers -- workaround to get faster YouTube connections in Taiwan
@@ -64,6 +64,7 @@ System Administration
 * ntp-sync -- sync system time through NTP
 * disk-{scan,deactivate} -- useful for eSATA hotplug. Nicer than scsi-rescan in sg3_utils.
 * git-repo-add-email-notifications -- configures email notification in git repositories.
+* vm-start -- manage virtual machines through "virsh" / libvirt
 
 Text Encoding Conversion
 ===
@@ -100,6 +101,8 @@ Fedora / RHEL Related
 Audio / Video Encoding and Conversion
 ===
 
+* video-extract-audio -- extract audio streams from video files for (rough, useful for
+  music videos from YouTube)
 * ffmpeg-webm-360p -- convert video to the WebM format through ffmpeg
 * flv-to-mp3 -- covnert audio tracks in FLV to an MP3
 * pulseaudio-rtp-serve -- broadcast audio from Linux through RTP in PCM or MP3 format
@@ -107,16 +110,11 @@ Audio / Video Encoding and Conversion
 Miscellaneous
 ===
 
-* alarm -- play an alarm sound
-* bbs -- telnet to a BBS site. Somehow they're still popular in Taiwan
-* bbs-atlantis
-* bbs-hsnu
-* bbs-ptt
-* bbs-ptt2
-* bbs-wretch
-* gnome-recently-used-clear -- clear the recently used files list in GNOME
 * pdf-pages -- merge multiple pages from a source PDF into one
+* gnome-recently-used-clear -- clear the recently used files list in GNOME
+* alarm -- play an alarm sound
 * sine-wave-audio -- play a test sound pattern
-* vm-start -- manage virtual machines through "virsh"
 * xnest -- start a nested Xnest server through startx
+* bbs -- telnet to a BBS site. Somehow they're still popular in Taiwan
+* bbs-{ptt,ptt2} -- telnet BBS shortcuts
 * document-files-in-README -- help maintain this README
