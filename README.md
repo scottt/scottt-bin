@@ -83,12 +83,9 @@ Fedora / RHEL Related
 * rpmlint-pattern -- run rpmlint on files whose name matches pattern
 * rpm-name-strip-version
 * rpm-review-files-provides-requires -- review RPM content after packaging
-* ygin -- yum groupinstall
-* yin -- yum install
-* yinlocal -- yum localinstall
-* ylist -- yum list
-* yre -- yum remove
-* yupdate -- yum update
+* {ygin,yin,yinlocal,ylist,yre,yupdate} -- yum {group install,install,localinstall,list,remove,update}
+* {dgin,din,dinlocal,dlist,dre,dupdate} -- dnf {group install,install,localinstall,list,remove,update}
+* dnf-wrapper -- implementation of the dnf shorthands
 * yupdate-review -- review updates in /var/log/yum.log with VIM
 * vim_yum_update_review.py -- part of yupdate-review
 * yum_update_log.vim  -- part of yupdate-review
