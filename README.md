@@ -112,6 +112,6 @@ Miscellaneous
 * alarm -- play an alarm sound
 * sine-wave-audio -- play a test sound pattern
 * xnest -- start a nested Xnest server through startx
+* bbs-{ptt,ptt2} -- telnet to the PTT or PTT2 BBS sites
 * bbs -- telnet to a BBS site. Somehow they're still popular in Taiwan
-* bbs-{ptt,ptt2} -- telnet BBS shortcuts
 * document-files-in-README -- help maintain this README
