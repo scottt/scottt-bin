@@ -5,7 +5,7 @@
 # See yum_update_log.vim for the key bindings.
 
 # Installation:
-# 1. Put yum_update_log.vim in the same directory as this cript 
+# 1. Put yum_update_log.vim in the same directory as this script
 #    or use the '--vim-script' option.
 # 2. Setup 'sudo' privileges.
 
@@ -20,11 +20,27 @@ import subprocess
 def program_name():
     return os.path.basename(sys.argv[0])
 
+main_function_map = {}
+
+def main_function(func):
+    global main_function_map
+    main_function_map[func.__name__.replace('_','-')] = func
+    return func
+
+def main_function_dispatch(name, args):
+    try:
+        f = main_function_map[name]
+    except KeyError:
+        sys.stderr.write('%s is not a valid command name\n' % (name,))
+        sys.exit(2)
+    f(args)
+
 def print_usage_exit():
     sys.stderr.write('usage: %s [YUM_LOG_FILE]\n' % (program_name(),))
     sys.exit(2)
 
-def main(args):
+@main_function
+def yupdate_review(args):
     bin_dir = os.path.dirname(sys.argv[0])
     op = optparse.OptionParser(option_list=[
         optparse.Option('--vim-script', default=os.path.join(bin_dir, 'yum_update_log.vim')),
@@ -47,5 +63,23 @@ def main(args):
     subprocess.check_call(['sudo', 'vim', '-R', '-S', options.vim_script,
                            yum_log_filename, '+%d' % (l,)])
 
+@main_function
+def dupdate_review(args):
+    orignal_logfile = '/var/log/dnf.rpm.log'
+    tf = tempfile.NamedTemporaryFile(mode='w+')
+
+    # filter out lines like
+    # Sep 11 04:44:50 INFO Cleanup: gstreamer1-vaapi-0.5.8-3.fc20.x86_64
+    # Sep 11 05:19:14 INFO --- logging initialized ---
+    for i in open(orignal_logfile):
+        if 'INFO ---' in i:
+            continue
+        elif 'INFO Cleanup: ' in i:
+            continue
+        else:
+            tf.write(i)
+    tf.seek(0)
+    yupdate_review(args + [tf.name])
+
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main_function_dispatch(program_name(), sys.argv[1:])

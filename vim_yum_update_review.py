@@ -14,11 +14,19 @@ def version_start_index(s):
     raise ValueError
 
 # assume input in format:
+# Supported input formats:
+# 1. /var/log/yum.log
 # Mar 23 05:37:10 Updated: system-config-printer-0.7.82.1-3.fc9.x86_64
+# 2. /var/log/dnf.rpm.log
+# Mar 13 18:00:25 INFO Installed: systemd-python3-208-15.fc20.x86_64
 def package_version_arch_from_line(line):
     f = line.split()
 
-    t = f[4]
+    if f[3] == 'INFO':
+        package_field_index = 5
+    else:
+        package_field_index = 4
+    t = f[package_field_index]
     d = version_start_index(t)
     # handle Epoch:Package, ex:
     # Mar 23 05:33:30 Updated: 1:openoffice.org-math-2.4.0-12.1.fc9.x86_64
@@ -28,15 +36,18 @@ def package_version_arch_from_line(line):
         epoch = t[:j]
         t = t[j+1:]
     d = version_start_index(t)
-    try:
-        i = t.rindex('.')
-        (package, version, arch) = (t[:d-1], t[d:i], t[i+1:])
-    except ValueError:
-        arch = None
+    i = t.rindex('.')
+    (package, version, arch) = (t[:d-1], t[d:i], t[i+1:])
+    if 0:
         try:
-            version = f[5]
-        except IndexError:
-            version = None
+            i = t.rindex('.')
+            (package, version, arch) = (t[:d-1], t[d:i], t[i+1:])
+        except ValueError:
+            arch = None
+            try:
+                version = f[package_field_index + 1]
+            except IndexError:
+                version = None
     if DEBUG:
         sys.stderr.write('%s\n' % ((package, version, arch),))
     return (package, version, arch)
