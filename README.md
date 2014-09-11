@@ -57,7 +57,7 @@ System Administration
 
 * remote-domain-socket-proxy -- connect to a remote Unix domain socket through a local one.
   e.g. MySQL remote administration.
-* iptables-allow-{daap,http,mdns,nfsv4,samba,ssh} -- open port(s) with iptables
+* iptables-allow-{daap,http,mdns,nfsv4,samba,ssh,soundwire} -- open port(s) with iptables
 * iptables-allow-mdns-over-host-nat -- allow mDNS (avahi) over host NAT mostly for libvirt VMs.
 * iptables-reject-hinet-youtube-servers -- workaround to get faster YouTube connections in Taiwan
 * iptables-reject-slow-akaimai-bloomberg-tv -- workaround for watching bloomberg.com/tv in Taiwan
@@ -86,9 +86,9 @@ Fedora / RHEL Related
 * {ygin,yin,yinlocal,ylist,yre,yupdate} -- yum {group install,install,localinstall,list,remove,update}
 * {dgin,din,dinlocal,dlist,dre,dupdate} -- dnf {group install,install,localinstall,list,remove,update}
 * dnf-wrapper -- implementation of the dnf shorthands
-* yupdate-review -- review updates in /var/log/yum.log with VIM
+* {d,y}update-review -- review the YUM or DNF log file in VIM. See yum_update_log.vim for key bindings
 * vim_yum_update_review.py -- part of yupdate-review
-* yum_update_log.vim  -- part of yupdate-review
+* yum_update_log.vim  -- part of yupdate-review. Key bindings for showing changelog, provides, requires etc
 * fedora-source-query -- query Fedora build dependencies
 * src-install -- install the source for a file that comes with the OS
 * yum-febootstrap -- create chroots from Fedora repositories with yum
