@@ -36,7 +36,7 @@ def main_function_dispatch(name, args):
     f(args)
 
 def print_usage_exit():
-    sys.stderr.write('usage: %s [YUM_LOG_FILE]\n' % (program_name(),))
+    sys.stderr.write('usage: %s [YUM_or_DNF_LOG_FILE]\n' % (program_name(),))
     sys.exit(2)
 
 @main_function
@@ -65,7 +65,13 @@ def yupdate_review(args):
 
 @main_function
 def dupdate_review(args):
-    orignal_logfile = '/var/log/dnf.rpm.log'
+    if len(args) == 0:
+        orignal_logfile = '/var/log/dnf.rpm.log'
+    elif len(args) == 1:
+        orignal_logfile = args[0]
+    else:
+        print_usage_exit()
+
     tf = tempfile.NamedTemporaryFile(mode='w+')
 
     # filter out lines like
@@ -79,7 +85,7 @@ def dupdate_review(args):
         else:
             tf.write(i)
     tf.seek(0)
-    yupdate_review(args + [tf.name])
+    yupdate_review([tf.name])
 
 if __name__ == '__main__':
     main_function_dispatch(program_name(), sys.argv[1:])
