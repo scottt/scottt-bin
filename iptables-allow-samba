@@ -41,6 +41,11 @@ HTTP_PORTS = [
     ('tcp', 80),
 ]
 
+SOUNDWIRE_PORTS = [
+    ('udp', 59010),
+    ('udp', 59011),
+]
+
 # TODO: DLNA?
 
 def iptables_allow(ports, interface=None):
@@ -101,6 +106,14 @@ def iptables_allow_nfsv4(args):
 
 @main_function
 def iptables_allow_http(args):
+    op = optparse.OptionParser(option_list = [
+        optparse.Option('-i', '--interface', default=None),
+    ])
+    (options, args) = op.parse_args(args)
+    iptables_allow(HTTP_PORTS, options.interface)
+
+@main_function
+def iptables_allow_soundwire(args):
     op = optparse.OptionParser(option_list = [
         optparse.Option('-i', '--interface', default=None),
     ])
