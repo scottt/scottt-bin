@@ -39,7 +39,7 @@ See:
 def human_size(size_in_blocks):
     '''
     Number in "/sys/block/sda/size" -> "250G"
-    
+
     >>> human_size(488397168)
     '250.0G'
     >>> human_size(625142448)
@@ -101,12 +101,13 @@ main_function_map = {}
 def main_function(func):
     global main_function_map
     main_function_map[func.__name__.replace('_','-')] = func
+    return func
 
 @main_function
 def disk_scan(args):
     p = optparse.OptionParser(usage='%prog')
     (options, args) = p.parse_args(args)
-    
+
     old_disks = disk_list()
 
     for i in glob.glob('/sys/class/scsi_host/host*/scan'):
@@ -151,7 +152,7 @@ def disk_deactivate(args):
                     dict(host=hbtl[0], bus=hbtl[1], target=hbtl[2], lun=hbtl[3], name=dev_name))
     with open(delete_fname, 'w') as f:
         f.write('1')
-    
+
 def main_function_dispatch(name, args):
     try:
         f = main_function_map[name]

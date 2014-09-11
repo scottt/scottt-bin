@@ -57,6 +57,7 @@ main_function_map = {}
 def main_function(func):
     global main_function_map
     main_function_map[func.__name__.replace('_','-')] = func
+    return func
 
 @main_function
 def iptables_allow_samba(args):
