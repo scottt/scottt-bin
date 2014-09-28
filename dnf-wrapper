@@ -42,6 +42,12 @@ def dlist(args):
     r = subprocess.call(['sudo', 'dnf', 'list'] + args)
     sys.exit(r)
 
+@main_function
+def dbuilddep(args):
+    # requires 'dnf-plugins-core' to be installed
+    r = subprocess.call(['sudo', 'dnf', 'builddep'] + args)
+    sys.exit(r)
+
 def main_function_dispatch(name, args):
     try:
         f = main_function_map[name]

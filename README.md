@@ -84,7 +84,7 @@ Fedora / RHEL Related
 * rpm-name-strip-version
 * rpm-review-files-provides-requires -- review RPM content after packaging
 * {ygin,yin,yinlocal,ylist,yre,yupdate} -- yum {group install,install,localinstall,list,remove,update}
-* {dgin,din,dinlocal,dlist,dre,dupdate} -- dnf {group install,install,localinstall,list,remove,update}
+* {dgin,din,dinlocal,dlist,dre,dupdate,builddep} -- dnf {group install,install,localinstall,list,remove,update,builddep}
 * dnf-wrapper -- implementation of the dnf shorthands
 * {d,y}update-review -- review the YUM or DNF log file in VIM. See yum_update_log.vim for key bindings
 * vim_yum_update_review.py -- part of yupdate-review
