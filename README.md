@@ -94,6 +94,7 @@ Fedora / RHEL Related
 * yum-febootstrap -- create chroots from Fedora repositories with yum
 * yinchroot -- install package(s) in chroot
 * graphics-stack-versions -- list Linux graphics stack component versions on the running system
+* airplane-{on,off} -- under Linux, turn bluetooth and WiFi on/off (implemented with `rfkill`)
 
 Audio / Video Encoding and Conversion
 ===
