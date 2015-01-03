@@ -16,6 +16,7 @@ import os
 import optparse
 import tempfile
 import subprocess
+import errno
 
 def program_name():
     return os.path.basename(sys.argv[0])
@@ -66,18 +67,25 @@ def yupdate_review(args):
 @main_function
 def dupdate_review(args):
     if len(args) == 0:
-        orignal_logfile = '/var/log/dnf.rpm.log'
+        original_logfile = '/var/log/dnf.rpm.log'
     elif len(args) == 1:
-        orignal_logfile = args[0]
+        original_logfile = args[0]
     else:
         print_usage_exit()
 
-    tf = tempfile.NamedTemporaryFile(mode='w+')
+    try:
+        log_file = open(original_logfile)
+    except IOError as e:
+        if e.errno != errno.EACCES:
+            raise
+        subprocess.check_call(['sudo'] + sys.argv)
+        sys.exit(0)
 
+    tf = tempfile.NamedTemporaryFile(mode='w+')
     # filter out lines like
     # Sep 11 04:44:50 INFO Cleanup: gstreamer1-vaapi-0.5.8-3.fc20.x86_64
     # Sep 11 05:19:14 INFO --- logging initialized ---
-    for i in open(orignal_logfile):
+    for i in log_file:
         if 'INFO ---' in i:
             continue
         elif 'INFO Cleanup: ' in i:
