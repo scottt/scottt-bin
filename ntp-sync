@@ -1,5 +1,28 @@
-#!/bin/sh
+#!/usr/bin/env python
 
-# synchronize computer time with a trusted source on the internet
-#ntp.nasa.gov
-sudo ntpdate -s ntp.nasa.gov
+usage_msg = (
+'''Synchronize computer time with a trusted source on the internet
+Synopsis:
+$ ntp-sync # uses pool.ntp.org
+$ ntp-sync CUSTOM-NTP-SERVER
+''')
+
+import sys
+import subprocess
+
+def print_usage_exit():
+    sys.stderr.write(usage_msg)
+    sys.exit(2)
+
+args = sys.argv[1:]
+
+if len(args) == 0:
+    ntp_server = 'pool.ntp.org'
+elif len(args) == 1:
+    ntp_server = args[0]
+    if ntp_server in set(['-h', '--help']):
+        print_usage_exit()
+else:
+    print_usage_exit()
+
+subprocess.check_call(['sudo', 'ntpdate', '-dv', ntp_server])
