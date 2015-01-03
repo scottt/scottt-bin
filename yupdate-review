@@ -41,7 +41,7 @@ def print_usage_exit():
     sys.exit(2)
 
 @main_function
-def yupdate_review(args):
+def yupdate_review(args, sudo=True):
     bin_dir = os.path.dirname(sys.argv[0])
     op = optparse.OptionParser(option_list=[
         optparse.Option('--vim-script', default=os.path.join(bin_dir, 'yum_update_log.vim')),
@@ -58,11 +58,17 @@ def yupdate_review(args):
     # TODO: don't run vim under sudo.
     # Run 'yum_log_open()' in a privileged process and pass the fd back instead.
     tf = tempfile.TemporaryFile(mode='w+')
-    subprocess.check_call(['sudo', 'wc', '-l', yum_log_filename], stdout=tf)
+    cmd = ['wc', '-l', yum_log_filename]
+    if sudo:
+        cmd = ['sudo'] + cmd
+    subprocess.check_call(cmd, stdout=tf)
     tf.seek(0)
     l = int(tf.read().split()[0])
-    subprocess.check_call(['sudo', 'vim', '-R', '-S', options.vim_script,
-                           yum_log_filename, '+%d' % (l,)])
+
+    cmd = ['vim', '-R', '-S', options.vim_script, yum_log_filename, '+%d' % (l,)]
+    if sudo:
+        cmd = ['sudo'] + cmd
+    subprocess.check_call(cmd)
 
 @main_function
 def dupdate_review(args):
@@ -93,7 +99,7 @@ def dupdate_review(args):
         else:
             tf.write(i)
     tf.seek(0)
-    yupdate_review([tf.name])
+    yupdate_review([tf.name], sudo=False)
 
 if __name__ == '__main__':
     main_function_dispatch(program_name(), sys.argv[1:])

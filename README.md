@@ -84,7 +84,7 @@ Fedora / RHEL Related
 * rpm-name-strip-version
 * rpm-review-files-provides-requires -- review RPM content after packaging
 * {ygin,yin,yinlocal,ylist,yre,yupdate} -- yum {group install,install,localinstall,list,remove,update}
-* {dgin,din,dinlocal,dlist,dre,dupdate} -- dnf {group install,install,localinstall,list,remove,update}
+* {dgin,din,dinlocal,dlist,dre,dupdate,builddep} -- dnf {group install,install,localinstall,list,remove,update,builddep}
 * dnf-wrapper -- implementation of the dnf shorthands
 * {d,y}update-review -- review the YUM or DNF log file in VIM. See yum_update_log.vim for key bindings
 * vim_yum_update_review.py -- part of yupdate-review
@@ -94,6 +94,7 @@ Fedora / RHEL Related
 * yum-febootstrap -- create chroots from Fedora repositories with yum
 * yinchroot -- install package(s) in chroot
 * graphics-stack-versions -- list Linux graphics stack component versions on the running system
+* airplane-{on,off} -- under Linux, turn bluetooth and WiFi on/off (implemented with `rfkill`)
 
 Audio / Video Encoding and Conversion
 ===
