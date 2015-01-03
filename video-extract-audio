@@ -6,6 +6,7 @@
 import sys
 import os
 import subprocess
+import errno
 
 def video_leave_audio(filename):
     # Outline for reasonable implementation
@@ -34,7 +35,13 @@ def video_leave_audio(filename):
 
 def main(args):
     for i in args:
-        video_leave_audio(i)
+        try:
+            video_leave_audio(i)
+        except OSError as e:
+            if e.errno != errno.ENOENT:
+                raise
+            sys.stderr.write("You don't have ffmpeg installed, aborting\n")
+            sys.exit(2)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
