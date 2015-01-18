@@ -1,13 +1,30 @@
 #!/usr/bin/env python
 
-# usage: compilefunc [options] SOURCE-FILE FUNCTION [FUNCTION...]
-# generate assembler output on stdout for specified functions.
-# Supports the CC, CFLAGS, CXX, CXXFLAGS, LDFLAGS and GDB environment variables.
-# Unknown options are passed to the compiler.
-# Invokes gcc or g++ depending on the file extension.
+compilefunc_usage = (
+'''usage: compilefunc [options] SOURCE-FILE FUNCTION [FUNCTION...]
+Generate assembler output on stdout for specified functions.
+Supports the CC, CFLAGS, CXX, CXXFLAGS, LDFLAGS and GDB environment variables.
+Unknown options are passed to the compiler.
+Invokes gcc or g++ depending on the file extension.
 
-# NOTE: unless --do-link is passed, global variable and function references
-# will appear to reference the wrong address.
+NOTE: unless --do-link is passed, global variable and function references
+will appear to reference the wrong address.
+''')
+
+gdbdis_usage = (
+'''usage: gdbdis EXE FUNC
+Disassemble a funtion from an executable with GDB
+        $ gdbdis /bin/true main
+        0x00000000004011b0 <+0>: 83 ff 02    cmp    $0x2,%edi
+        0x00000000004011b3 <+3>: 53          push   %rbx
+''')
+
+gdbx_usage = (
+'''usage: gdbx EXE ADDR FORMAT
+Examine a memory address with GDB from an executable
+        $ gdbx /bin/true 0x4039e4 s
+        0x4039e4 <__dso_handle+732>:   "GNU coreutils"
+''')
 
 import sys
 import os
@@ -15,8 +32,22 @@ import subprocess
 import errno
 import argparse
 import tempfile
+import logging
 
-DEBUG = 0
+main_function_map = {}
+
+def main_function(func):
+    global main_function_map
+    main_function_map[func.__name__.replace('_','-')] = func
+    return func
+
+def main_function_dispatch(name, args):
+    try:
+        f = main_function_map[name]
+    except KeyError:
+        sys.stderr.write('%s is not a valid command name\n' % (name,))
+        sys.exit(2)
+    f(args)
 
 def program_name():
     return os.path.basename(sys.argv[0])
@@ -69,7 +100,19 @@ def gdb_batch_disassemble(gdb, exe, functions, options):
         assert(end != -1)
         sys.stdout.write(o[start:end])
 
-def main(args):
+def gdb_command_name():
+    cc = os.environ.get('CC', 'gcc')
+    gdb = os.environ.get('GDB')
+    if gdb is None:
+        # 'arm-linux-androideabi-gcc' -> 'arm-linux-androideabi-gdb'
+        try:
+            gdb = cc[:cc.rindex('-')+1]+'gdb'
+        except ValueError:
+            gdb = 'gdb'
+    return gdb
+
+@main_function
+def compilefunc(args):
     ap = argparse.ArgumentParser(description='generate asm for the specified functions')
     ap.add_argument('source_file', metavar='SOURCE-FILE', help='C or C++ source file')
     ap.add_argument('functions', metavar='FUNCTION', nargs='+', help='function to generate asm for')
@@ -91,13 +134,7 @@ def main(args):
     cc = os.environ.get(env_cc, default_cc)
     cflags = os.environ.get(env_cflags, '')
     cflags = [ x for x in cflags.split() if x ]
-    gdb = os.environ.get('GDB')
-    if gdb is None:
-        # 'arm-linux-androideabi-gcc' -> 'arm-linux-androideabi-gdb'
-        try:
-            gdb = cc[:cc.rindex('-')+1]+'gdb'
-        except ValueError:
-            gdb = 'gdb'
+    gdb = gdb_command_name()
 
     (fout_fd, fout) = tempfile.mkstemp()
     t = ['-g']
@@ -109,8 +146,7 @@ def main(args):
         t.extend([ '-c', args.source_file ])
     try:
         cmd = [cc] + cflags  + unknown_args + t + ['-o', fout]
-        if DEBUG > 1:
-            print >> sys.stderr, 'compile:', cmd
+        logging.debug('compile: %s' % (cmd,))
         r = subprocess.call(cmd)
         if r == 0:
             try:
@@ -120,5 +156,22 @@ def main(args):
     finally:
         os.unlink(fout)
 
+@main_function
+def gdbdis(args):
+    ap = argparse.ArgumentParser(description='disassemble function from EXE')
+    ap.add_argument('executable', metavar='EXECUTABLE', help='executable file to disassemble')
+    ap.add_argument('functions', metavar='FUNCTION', nargs='+', help='function name or address to disassemble')
+    ap.add_argument('-r', '--raw-instructions', action='store_true', help='show raw instruction opcodes')
+    ap.add_argument('-s', '--source', action='store_true', help='include source lines'),
+    ap.add_argument('--no-header', action='store_true', 
+                        help="don't show \"Dump of ...\" headers and footers even when disassembling multiple functions")
+    (args, unknown_args) = ap.parse_known_args(args)
+
+    if len(args.functions) == 1:
+        args.no_header = True
+
+    gdb = gdb_command_name()
+    gdb_batch_disassemble(gdb, args.executable, args.functions, args)
+
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main_function_dispatch(program_name(), sys.argv[1:])

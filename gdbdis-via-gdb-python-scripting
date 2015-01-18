@@ -1,0 +1,165 @@
+#!/usr/bin/gdb --python
+# vim: set filetype=python:
+
+# gdbdis: disassemble a funtion from an executable with GDB
+#         $ gdbdis /bin/true main
+#         0x00000000004011b0 <+0>: 83 ff 02    cmp    $0x2,%edi
+#         0x00000000004011b3 <+3>: 53          push   %rbx
+# gdbx: examine a memory address with GDB from an executable
+#         $ gdbx /bin/true 0x4039e4 s
+#         0x4039e4 <__dso_handle+732>:   "GNU coreutils"
+
+import sys
+import os
+import optparse
+
+import gdb
+
+def gdb_fix_argv():
+    '''
+    gdb breaks sys.argv[0] in the way it embeds Python
+    ./gdb-python-script -> sys.argv: ['']
+    when argv should be: [ './gdb-python-script' ]
+    ./gdb-python-script 0 1 2 -> sys.argv: ['0', '1', '2']
+    when argv should be should be:  [ './gdb-python-script', '0', '1', '2' ]
+    '''
+    try:
+        f = open('/proc/%d/cmdline' % (os.getpid(),))
+    except IOError:
+        return
+    l = f.readline()
+    f.close()
+    cmdline = l.split('\x00')
+    if cmdline[-1] == '':
+        cmdline = cmdline[:-1]
+    if cmdline[0].endswith('gdb') and cmdline[1] == '--python':
+        sys.argv = cmdline[2:]
+
+def gdb_disassemble(exe, functions, options):
+    gdb.execute('file %s' % (exe,))
+    for i in functions:
+        if options.raw_instructions or options.source:
+            dis_options = '/'
+        else:
+            dis_options = ''
+        if options.raw_instructions:
+            dis_options += 'r'
+        if options.source:
+            dis_options += 'm'
+        try:
+            o = gdb.execute('disassemble %s %s' % (dis_options, i), to_string=True)
+        except gdb.error, e:
+            # Let's hope these GDB error message strings are stable ..
+            if not e.message.startswith('No symbol table is loaded'):
+                raise
+            sys.stderr.write("%s: %s: can't find symbol table\n" % (program_name(), exe,))
+            if exe.startswith('/usr/bin') or exe.startswith('/bin'):
+                sys.stderr.write('\ttry debuginfo-install\n')
+            sys.exit(3)
+
+        if options.no_header:
+            i = o.find('\n')
+            j = o.rfind('\n')
+            j = o.rfind('\n', 0, j)
+            o = o[i+1:j+1]
+        sys.stdout.write(o)
+
+main_function_map = {}
+
+def main_function(func):
+    global main_function_map
+    main_function_map[func.__name__.replace('_','-')] = func
+    return func
+
+@main_function
+def gdbdis(args):
+    p = optparse.OptionParser(usage=('%prog EXECUTABLE NAME-or-ADDRESS [NAME-or-ADDRESS ...]\n'
+                                     'Use gdb to disassemble symbolic names or memory addresses from a program'),
+                              option_list=[
+        optparse.Option('-r', '--no-raw-instructions', action='store_true',
+                        help="don't show the raw instructions in hex next to the assembler"),
+        optparse.Option('--no-header', action='store_true',
+                        dest='no_header',
+                        help="don't show \"Dump of ...\" headers and footers even when disassembling multiple functions"),
+        optparse.Option('-s', '--source', action='store_true',
+                        dest='source',
+                        help='include source lines'),
+    ])
+
+    (options, args) = p.parse_args(args)
+    try:
+        (exe, functions) = (args[0], args[1:])
+        if (not exe) or (not functions):
+            p.print_usage()
+            sys.exit(2)
+    except IndexError:
+        p.print_usage()
+        sys.exit(2)
+
+    if len(functions) == 1:
+        # behave like grep: don't show file names when only one file is specified on the command line
+        options.no_header = True
+
+    options.raw_instructions = not options.no_raw_instructions
+    gdb_disassemble(exe, functions, options)
+
+@main_function
+def gdbx(args):
+    usage = '''%prog EXECUTABLE ADDRESS [FORMAT]
+Use gdb to examine a memory addresses from an executable
+FORMAT: [count] format-letter  size-letter
+format-letter: o, x, d, u, t(binary), f, a(address), i(instruction), c, s(string)
+size-letter:   b, h(halfword), w(word), g(giant, 8 bytes)
+
+Examples:
+$ gdbx /bin/true 0x4039e4 s
+0x4039e4 <__dso_handle+732>:     "GNU coreutils"
+$ gdbx /bin/true 0x4039e4 4c
+0x4039e4 <__dso_handle+732>:    71 'G'  78 'N'  85 'U'  32 ' '
+    '''
+    p = optparse.OptionParser(usage=usage)
+    (options, args) = p.parse_args(args)
+    if len(args) == 2:
+        (exe, addr) = args
+        fmt = None
+    elif len(args) == 3:
+        (exe, addr, fmt) = args
+    else:
+        p.print_help()
+        sys.exit(2)
+    gdb.execute('file %s' % (exe,))
+    if fmt is None:
+        gdb.execute('x %(addr)s' % dict(addr=addr))
+    else:
+        gdb.execute('x/%(fmt)s %(addr)s' % dict(fmt=fmt, addr=addr))
+
+@main_function
+def gdb_info_scope(args):
+    usage = '''%prog EXECUTABLE FUNCTION
+Use gdb to list the variables local to a scope.
+Shows DWARF debug info.
+'''
+    p = optparse.OptionParser(usage=usage)
+    (options, args) = p.parse_args(args)
+    if len(args) == 2:
+        (exe, name) = args
+    else:
+        p.print_help()
+        sys.exit(2)
+    gdb.execute('file %s' % (exe,))
+    gdb.execute('info scope ' + name)
+
+def main_function_dispatch(name, args):
+    try:
+        f = main_function_map[name]
+    except KeyError:
+        sys.stderr.write('%s is not a valid command name\n' % (name,))
+        sys.exit(2)
+    f(args)
+
+def program_name():
+    return os.path.basename(sys.argv[0])
+
+if __name__ == '__main__':
+    gdb_fix_argv()
+    main_function_dispatch(program_name(), sys.argv[1:])
