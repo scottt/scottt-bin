@@ -84,7 +84,7 @@ Fedora / RHEL Related
 * rpm-name-strip-version
 * rpm-review-files-provides-requires -- review RPM content after packaging
 * {ygin,yin,yinlocal,ylist,yre,yupdate} -- yum {group install,install,localinstall,list,remove,update}
-* {dgin,din,dinlocal,dlist,dre,dupdate,builddep} -- dnf {group install,install,localinstall,list,remove,update,builddep}
+* {dgin,din,dinlocal,dlist,dre,dupdate,dbuilddep} -- dnf {group install,install,localinstall,list,remove,update,builddep}
 * dnf-wrapper -- implementation of the dnf shorthands
 * {d,y}update-review -- review the YUM or DNF log file in VIM. See yum_update_log.vim for key bindings
 * vim_yum_update_review.py -- part of yupdate-review
@@ -94,11 +94,13 @@ Fedora / RHEL Related
 * yum-febootstrap -- create chroots from Fedora repositories with yum
 * yinchroot -- install package(s) in chroot
 * graphics-stack-versions -- list Linux graphics stack component versions on the running system
-* airplane-{on,off} -- under Linux, turn bluetooth and WiFi on/off (implemented with `rfkill`)
+* airplane-mode-{on,off} -- under Linux, turn bluetooth and WiFi on/off (implemented with `rfkill`)
 
 Audio / Video Encoding and Conversion
 ===
 
+* sine-wave-audio -- play a sine wave test sound pattern
+* sine-wave-save -- save a sine wave test sound pattern as a RAW or WAV file
 * video-extract-audio -- extract audio streams from video files for (rough, useful for
   music videos from YouTube)
 * ffmpeg-webm-360p -- convert video to the WebM format through ffmpeg
@@ -111,7 +113,6 @@ Miscellaneous
 * pdf-pages -- merge multiple pages from a source PDF into one
 * gnome-recently-used-clear -- clear the recently used files list in GNOME
 * alarm -- play an alarm sound
-* sine-wave-audio -- play a test sound pattern
 * xnest -- start a nested Xnest server through startx
 * bbs-{ptt,ptt2} -- telnet to the PTT or PTT2 BBS sites
 * bbs -- telnet to a BBS site. Somehow they're still popular in Taiwan
