@@ -3,27 +3,96 @@
 # play a 'sine wave' test audio clip so you can test your audio settings
 
 import sys
+import os
 import subprocess
 import optparse
 
-def main(args):
-    op = optparse.OptionParser(usage='usage: %prog [FREQUENCY]')
+main_function_map = {}
+
+def main_function(func):
+    global main_function_map
+    main_function_map[func.__name__.replace('_','-')] = func
+    return func
+
+def main_function_dispatch(name, args):
+    try:
+        f = main_function_map[name]
+    except KeyError:
+        sys.stderr.write('%s is not a valid command name\n' % (name,))
+        sys.exit(2)
+    f(args)
+
+def program_name():
+    return os.path.basename(sys.argv[0])
+
+def common_option_list():
+    return [
+        optparse.Option('--freq', type=float, default=1000.0),
+        optparse.Option('--unsigned', action='store_false', dest='is_signed', default=True),
+        optparse.Option('--rate', type=int, default=48000),
+        optparse.Option('--channels', type=int, default=2),
+        optparse.Option('--width', type=int, default=16),
+    ]
+
+(OUTPUT_AUDIO_HW,
+ OUTPUT_RAW,
+ OUTPUT_WAV
+) = range(3)
+
+def gen_audio(options, output_path):
+    if options.is_signed:
+        is_signed = 'true'
+    else:
+        is_signed = 'false'
+    (freq, rate, channels, width) = (options.freq, options.rate, options.channels, options.width)
+
+    cmd = ['gst-launch', '-v', '-m', 'audiotestsrc', 'freq=%(freq)f' % dict(freq=freq), '!',
+           'audioconvert', '!',
+           'audio/x-raw-int,signed=(boolean)%(is_signed)s,rate=(int)%(rate)d,channels=(int)%(channels)d,width=(int)%(width)d' %
+                dict(is_signed=is_signed, rate=rate, channels=channels, width=width) ]
+
+    if output_path == OUTPUT_AUDIO_HW:
+        cmd.extend(['!', 'autoaudiosink'])
+    elif output_path == OUTPUT_RAW:
+        cmd.extend(['!', 'filesink', 'location='+options.location])
+    elif output_path == OUTPUT_WAV:
+        cmd.extend(['!', 'wavenc' '!', 'filesink', 'location='+options.location])
+    else:
+        assert(0)
+
+    try:
+        subprocess.check_call(cmd)
+    except KeyboardInterrupt:
+        sys.exit(0)
+
+@main_function
+def sine_wave_save(args):
+    op = optparse.OptionParser(usage='usage: %prog [OPTIONS] FILE.raw | FILE.wav', option_list=common_option_list())
     (options, args) = op.parse_args(args)
     try:
-        (freq,) = args
-        freq = float(freq)
+        (filename,) = args
     except ValueError:
-        if len(args) == 0:
-            freq=1000.0
-        else:
-            op.print_usage()
-            sys.exit(2)
-    try:
-        subprocess.check_call('gst-launch audiotestsrc freq=%(freq)f !'
-                               'audioconvert ! audio/x-raw-int,channels=2 ! alsasink' %
-                               dict(freq=freq), shell=1)
-    except KeyboardInterrupt:
-        pass
+        op.print_usage()
+        sys.exit(2)
+
+    if os.path.splitext(filename)[1].lower() == '.wav':
+        save_wav = True
+    else:
+        save_wav = False
+
+    options.location = filename
+    gen_audio(options, OUTPUT_WAV if save_wav else OUTPUT_RAW)
+
+@main_function
+def sine_wave_audio(args):
+    op = optparse.OptionParser(usage='usage: %prog [OPTIONS]', option_list=common_option_list())
+    (options, args) = op.parse_args(args)
+
+    if len(args) != 0:
+        op.print_usage()
+        sys.exit(2)
+
+    gen_audio(options, OUTPUT_AUDIO_HW)
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main_function_dispatch(program_name(), sys.argv[1:])
