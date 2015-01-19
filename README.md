@@ -99,7 +99,7 @@ Fedora / RHEL Related
 Audio / Video Encoding and Conversion
 ===
 
-* sine-wave-audio -- play a sine wave test sound pattern
+* sine-wave-audio -- play a sine wave test sound pattern (via GStreamer)
 * sine-wave-save -- save a sine wave test sound pattern as a RAW or WAV file
 * video-extract-audio -- extract audio streams from video files for (rough, useful for
   music videos from YouTube)

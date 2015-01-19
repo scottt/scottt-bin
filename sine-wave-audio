@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 
-# play a 'sine wave' test audio clip so you can test your audio settings
+# Play a sine wave test audio clip so you can test your audio settings
+# $ sine-wave-audio
+
+# Save a sine wave test audio clip to a WAV or RAW file
+# $ sine-wave-save FILENAME.wav | FILENAME.raw
+
+# See Also: gstreamer pipelines in http://www.xinity-consulting.com/archives/54
 
 import sys
 import os
@@ -27,11 +33,12 @@ def program_name():
 
 def common_option_list():
     return [
-        optparse.Option('--freq', type=float, default=1000.0),
-        optparse.Option('--unsigned', action='store_false', dest='is_signed', default=True),
-        optparse.Option('--rate', type=int, default=48000),
-        optparse.Option('--channels', type=int, default=2),
-        optparse.Option('--width', type=int, default=16),
+        optparse.Option('-v', '--verbose', action='store_true'),
+        optparse.Option('-f', '--freq', type=float, default=1000.0),
+        optparse.Option('-u', '--unsigned', action='store_false', dest='is_signed', default=True),
+        optparse.Option('-r', '--rate', type=int, default=48000),
+        optparse.Option('-c', '--channels', type=int, default=2),
+        optparse.Option('-w', '--width', type=int, default=16),
     ]
 
 (OUTPUT_AUDIO_HW,
@@ -46,10 +53,13 @@ def gen_audio(options, output_path):
         is_signed = 'false'
     (freq, rate, channels, width) = (options.freq, options.rate, options.channels, options.width)
 
-    cmd = ['gst-launch', '-v', '-m', 'audiotestsrc', 'freq=%(freq)f' % dict(freq=freq), '!',
+    cmd = ['gst-launch']
+    if options.verbose:
+        cmd.extend(['-v', '-m'])
+    cmd.extend(['audiotestsrc', 'freq=%(freq)f' % dict(freq=freq), '!',
            'audioconvert', '!',
            'audio/x-raw-int,signed=(boolean)%(is_signed)s,rate=(int)%(rate)d,channels=(int)%(channels)d,width=(int)%(width)d' %
-                dict(is_signed=is_signed, rate=rate, channels=channels, width=width) ]
+                dict(is_signed=is_signed, rate=rate, channels=channels, width=width) ])
 
     if output_path == OUTPUT_AUDIO_HW:
         cmd.extend(['!', 'autoaudiosink'])
