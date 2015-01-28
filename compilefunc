@@ -7,23 +7,86 @@ Supports the CC, CFLAGS, CXX, CXXFLAGS, LDFLAGS and GDB environment variables.
 Unknown options are passed to the compiler.
 Invokes gcc or g++ depending on the file extension.
 
-NOTE: unless --do-link is passed, global variable and function references
+    $ CFLAGS='-O0' compilefunc -l var-arg.c main
+       0x000000000040067b <+0>: push   %rbp
+       0x000000000040067c <+1>: mov    %rsp,%rbp
+       0x000000000040067f <+4>: movsd  0xc9(%rip),%xmm0        # 0x400750
+       0x0000000000400687 <+12>:    mov    $0x1,%esi
+       0x000000000040068c <+17>:    mov    $0x40074a,%edi
+       0x0000000000400691 <+22>:    mov    $0x1,%eax
+       0x0000000000400696 <+27>:    callq  0x400536 <f>
+       0x000000000040069b <+32>:    mov    $0x0,%eax
+       0x00000000004006a0 <+37>:    pop    %rbp
+       0x00000000004006a1 <+38>:    retq   
+    $ CFLAGS='-Os' compilefunc -l var-arg.c main
+       0x0000000000400440 <+0>: push   %rax
+       0x0000000000400441 <+1>: mov    $0x1,%esi
+       0x0000000000400446 <+6>: mov    $0x400674,%edi
+       0x000000000040044b <+11>:    mov    $0x1,%al
+       0x000000000040044d <+13>:    movsd  0x22b(%rip),%xmm0        # 0x400680
+       0x0000000000400455 <+21>:    callq  0x400556 <f>
+       0x000000000040045a <+26>:    xor    %eax,%eax
+       0x000000000040045c <+28>:    pop    %rdx
+       0x000000000040045d <+29>:    retq   
+    $ CFLAGS='-O3' compilefunc -l var-arg.c main
+       0x0000000000400440 <+0>: sub    $0x8,%rsp
+       0x0000000000400444 <+4>: mov    $0x1,%esi
+       0x0000000000400449 <+9>: mov    $0x400694,%edi
+       0x000000000040044e <+14>:    movsd  0x24a(%rip),%xmm0        # 0x4006a0
+       0x0000000000400456 <+22>:    mov    $0x1,%eax
+       0x000000000040045b <+27>:    callq  0x400570 <f>
+       0x0000000000400460 <+32>:    xor    %eax,%eax
+       0x0000000000400462 <+34>:    add    $0x8,%rsp
+       0x0000000000400466 <+38>:    retq  
+
+NOTE: unless --do-link (or -l) is passed, global variable and function references
 will appear to reference the wrong address.
 ''')
 
 gdbdis_usage = (
 '''usage: gdbdis EXE FUNC
 Disassemble a funtion from an executable with GDB
-        $ gdbdis /bin/true main
-        0x00000000004011b0 <+0>: 83 ff 02    cmp    $0x2,%edi
-        0x00000000004011b3 <+3>: 53          push   %rbx
+        $ ./gdbdis /bin/true "'realloc@plt'" main,+6
+        Dump of assembler code for function realloc@plt:
+           0x0000000000401240 <+0>: jmpq   *0x204ee2(%rip)        # 0x606128 <realloc@got.plt>
+           0x0000000000401246 <+6>: pushq  $0x22
+           0x000000000040124b <+11>:    jmpq   0x401010
+        End of assembler dump.
+        Dump of assembler code from 0x401320 to 0x401326:
+           0x0000000000401320 <main+0>: cmp    $0x2,%edi
+           0x0000000000401323 <main+3>: push   %rbx
+           0x0000000000401324 <main+4>: je     0x40132d <main+13>
+        End of assembler dump.
+
+With a single argument, the function surrounding that address is dumped.
+Two arguments (separated by a comma) are taken as a range of memory to dump,
+  in the form of "start,end", or "start,+length".
+
+Note that the address is interpreted as an expression, not as a location
+like in the "break" command.
+So, for example, if you want to disassemble function bar in file foo.c
+you must type "disassemble 'foo.c'::bar" and not "disassemble foo.c:bar".
+
+Environment Variables: GDB
 ''')
 
 gdbx_usage = (
 '''usage: gdbx EXE ADDR FORMAT
-Examine a memory address with GDB from an executable
+Examine memory with GDB from an executable
         $ gdbx /bin/true 0x4039e4 s
         0x4039e4 <__dso_handle+732>:   "GNU coreutils"
+
+        $ GDB=arm-none-eabi-gdb gdbx cortex-m.elf 0 2a
+        0x0 <__isr_vector>: 0x20001000  0x185 <Reset_Handler> 
+
+ADDR is an expression for the memory address to examine.
+FORMAT is a repeat count followed by a format letter and a size letter.
+Format letters are o(octal), x(hex), d(decimal), u(unsigned decimal),
+  t(binary), f(float), a(address), i(instruction), c(char), s(string)
+  and z(hex, zero padded on the left).
+Size letters are b(byte), h(halfword), w(word), g(giant, 8 bytes).
+
+Environment Variables: GDB
 ''')
 
 import sys
@@ -52,45 +115,58 @@ def main_function_dispatch(name, args):
 def program_name():
     return os.path.basename(sys.argv[0])
 
-def gdb_batch_disassemble(gdb, exe, functions, options):
-    t = tempfile.NamedTemporaryFile(mode='w+')
-    t.write('file %s\n' % (exe,))
-    if options.raw_instructions or options.source:
-        dis_options = '/'
-    else:
-        dis_options = ''
+def gdb_batch(gdb_cmd, command_list):
+    gdb_input = tempfile.NamedTemporaryFile(mode='w+')
+    gdb_input.write('\n'.join(command_list))
+    gdb_input.seek(0)
+
+    (out_file, err_file) = (tempfile.TemporaryFile(mode='w+'),
+                            tempfile.TemporaryFile(mode='w+'))
+    r = subprocess.call([gdb_cmd, '--batch', '-x', gdb_input.name],
+                        stdout=out_file, stderr=err_file)
+    # NOTE: gdb exits with 0 even on errors ...
+    # Let's hope these GDB error message strings are stable ..
+    err_file.seek(0)
+    err_lines = err_file.readlines()
+    if err_lines:
+        # err_lines[0] would be 't.gdb:2: Error in sourced command file:', skip it
+        err_lines = err_lines[1:]
+        out = []
+        out.append('%s input:\n' % (gdb_cmd,))
+        gdb_input.seek(0)
+        out.append(gdb_input.read())
+        out.append('\n%s stderr:\n' % (gdb_cmd,))
+        out.extend(err_lines)
+        raise ValueError(''.join(out))
+    out_file.seek(0)
+    return out_file.read()
+
+def gdb_batch_disassemble(gdb_cmd, exe, functions, options):
+    dis_options = ''
     if options.raw_instructions:
         dis_options += 'r'
     if options.source:
         dis_options += 'm'
+    # prefix with '/'
+    if dis_options:
+        dis_options = '/' + dis_options
 
+    cmd = [
+        ('file %s' % (exe,)),
+    ]
     for i in functions:
-        t.write('disassemble %s %s\n' % (dis_options, i))
-    t.seek(0)
-
-    (outfile, errfile) = (tempfile.TemporaryFile(mode='w+'), tempfile.TemporaryFile(mode='w+'))
-    subprocess.call([gdb, '--batch', '-x', t.name], stdout=outfile, stderr=errfile)
-    # NOTE: gdb exits with 0 even on errors ...
-    # Let's hope these GDB error message strings are stable ..
-    errfile.seek(0)
-    errlines = [ x for x in errfile.readlines() ]
-    if errlines:
-        sys.stderr.write('%s input:\n' % (gdb,))
-        t.seek(0)
-        sys.stderr.write(t.read())
-        sys.stderr.write('\n%s stderr:\n' % (gdb,))
-        # errlines[0] would be 't.gdb:2: Error in sourced command file:'
-        sys.stderr.writelines(errlines[1:])
-        raise ValueError
-
-    outfile.seek(0)
-    o = outfile.read()
+        if not options.no_special_symbol_quoting:
+            #"printf@plt" -> "'printf@plt'"
+            if i.endswith('@plt'):
+                i = "'%s'" % (i,)
+        cmd.append("disassemble %s %s" % (dis_options, i))
+    o = gdb_batch(gdb_cmd, cmd)
 
     if not options.no_header:
-        sys.stdout.write(o)
-        return
+        return o
 
     (start, end) = (-1, 0)
+    out = []
     while 1:
         start = o.find('Dump of assembler code for function ', start + 1)
         if start == -1:
@@ -98,7 +174,8 @@ def gdb_batch_disassemble(gdb, exe, functions, options):
         start = o.find('\n', start) + 1
         end = o.find('End of assembler dump.\n', start)
         assert(end != -1)
-        sys.stdout.write(o[start:end])
+        out.append(o[start:end])
+    return ''.join(out)
 
 def gdb_command_name():
     cc = os.environ.get('CC', 'gcc')
@@ -116,15 +193,17 @@ def compilefunc(args):
     ap = argparse.ArgumentParser(description='generate asm for the specified functions')
     ap.add_argument('source_file', metavar='SOURCE-FILE', help='C or C++ source file')
     ap.add_argument('functions', metavar='FUNCTION', nargs='+', help='function to generate asm for')
-    ap.add_argument('--do-link', action='store_true', help='link and not just compile the code')
-    ap.add_argument('--source', action='store_true', help='generate mixed source and asm output')
-    ap.add_argument('--raw-instructions', action='store_true',
+    ap.add_argument('-l', '--do-link', action='store_true', help='link and not just compile the code')
+    ap.add_argument('-s', '--source', action='store_true', help='generate mixed source and asm output')
+    ap.add_argument('-r', '--raw-instructions', action='store_true',
                     help='show instruction encodings in hex next to asm')
+    ap.add_argument('--no-header', action='store_true', 
+                        help="don't show \"Dump of ...\" headers and footers even when disassembling multiple functions")
+    ap.add_argument('--no-special-symbol-quoting', action='store_true', default=False,
+                    help='disable auto quoiting of symbols that ends with @plt')
     (args, unknown_args) = ap.parse_known_args(args)
     if len(args.functions) < 2:
         args.no_header = True
-    else:
-        args.no_header = False
 
     t = args.source_file
     if t.endswith('.cpp') or t.endswith('.cc'):
@@ -144,17 +223,20 @@ def compilefunc(args):
         t.extend([ args.source_file ] + ldflags)
     else:
         t.extend([ '-c', args.source_file ])
+    o = None
     try:
         cmd = [cc] + cflags  + unknown_args + t + ['-o', fout]
         logging.debug('compile: %s' % (cmd,))
         r = subprocess.call(cmd)
         if r == 0:
             try:
-                gdb_batch_disassemble(gdb, fout, args.functions, args)
+                o = gdb_batch_disassemble(gdb, fout, args.functions, args)
             except ValueError:
                 sys.exit(3)
     finally:
         os.unlink(fout)
+    if o is not None:
+        sys.stdout.write(o)
 
 @main_function
 def gdbdis(args):
@@ -164,14 +246,81 @@ def gdbdis(args):
     ap.add_argument('-r', '--raw-instructions', action='store_true', help='show raw instruction opcodes')
     ap.add_argument('-s', '--source', action='store_true', help='include source lines'),
     ap.add_argument('--no-header', action='store_true', 
-                        help="don't show \"Dump of ...\" headers and footers even when disassembling multiple functions")
+                    help="don't show \"Dump of ...\" headers and footers even when disassembling multiple functions")
+    # --no-special-symbol-escapes: created so that by default,
+    # you don't need to do e.g. "'printf@plt'" from the shell to pass in PLT functions
+    ap.add_argument('--no-special-symbol-quoting', action='store_true', default=False,
+                    help='disable auto quoiting of symbols that ends with @plt')
     (args, unknown_args) = ap.parse_known_args(args)
 
     if len(args.functions) == 1:
         args.no_header = True
 
     gdb = gdb_command_name()
-    gdb_batch_disassemble(gdb, args.executable, args.functions, args)
+    try:
+        o = gdb_batch_disassemble(gdb, args.executable, args.functions, args)
+    except ValueError as e:
+        sys.stderr.write(e.message)
+        sys.exit(3)
+    else:
+        sys.stdout.write(o)
+        sys.exit(0)
+
+@main_function
+def gdbx(args):
+    ap = argparse.ArgumentParser(description='examine memory from EXE')
+    ap.add_argument('executable', metavar='EXECUTABLE', help='executable file to examine')
+    ap.add_argument('address', metavar='ADDRESS', help='symbol name or address to examine')
+    ap.add_argument('format', metavar='FORMAT', help='format for GDB like 4i, 8hx')
+    ap.add_argument('--no-special-symbol-quoting', action='store_true', default=False,
+                    help='disable auto quoiting of symbols that ends with @plt')
+    (args, unknown_args) = ap.parse_known_args(args)
+
+
+    if not args.no_special_symbol_quoting:
+        if args.address.endswith('@plt'):
+            args.address = "'%s'" % (args.address,)
+
+    gdb = gdb_command_name()
+    cmd = [
+        ('file %s' % (args.executable,)),
+        ('x/%(format)s %(address)s' % dict(format=args.format, address=args.address)),
+    ]
+    try:
+        o = gdb_batch(gdb, cmd)
+    except ValueError as e:
+        sys.stderr.write(e.message)
+        sys.exit(3)
+    sys.stdout.write(o)
+
+def gdb_info_cmd(description, info_cmd, args):
+    ap = argparse.ArgumentParser(description=description)
+    ap.add_argument('executable', metavar='EXECUTABLE', help='executable file to examine')
+    (args, unknown_args) = ap.parse_known_args(args)
+
+    gdb = gdb_command_name()
+    cmd = [
+        'file '+ args.executable,
+        'info ' + info_cmd,
+    ]
+    try:
+        o = gdb_batch(gdb, cmd)
+    except ValueError as e:
+        sys.stderr.write(e.message)
+        sys.exit(3)
+    sys.stdout.write(o)
+
+@main_function
+def gdb_info_functions(args):
+    gdb_info_cmd('list functions from EXE', 'functions', args)
+
+@main_function
+def gdb_info_variables(args):
+    gdb_info_cmd('list variables from EXE', 'variables', args)
+
+@main_function
+def gdb_info_types(args):
+    gdb_info_cmd('list types from EXE', 'types', args)
 
 if __name__ == '__main__':
     main_function_dispatch(program_name(), sys.argv[1:])
