@@ -293,6 +293,32 @@ def gdbx(args):
         sys.exit(3)
     sys.stdout.write(o)
 
+@main_function
+def gdb_info_scope(args):
+    ap = argparse.ArgumentParser(description='show debug info for function')
+    ap.add_argument('executable', metavar='EXECUTABLE', help='executable file to examine')
+    ap.add_argument('functions', metavar='FUNCTION', nargs='+', help='function name or address to disassemble')
+    ap.add_argument('--no-special-symbol-quoting', action='store_true', default=False,
+                    help='disable auto quoiting of symbols that ends with @plt')
+    (args, unknown_args) = ap.parse_known_args(args)
+
+    gdb = gdb_command_name()
+    cmd = [
+        'file '+ args.executable,
+    ]
+
+    for i in args.functions:
+        if not args.no_special_symbol_quoting:
+            if i.endswith('@plt'):
+                i = "'%s'" % (i,)
+        cmd.append('info scope ' + i)
+    try:
+        o = gdb_batch(gdb, cmd)
+    except ValueError as e:
+        sys.stderr.write(e.message)
+        sys.exit(3)
+    sys.stdout.write(o)
+
 def gdb_info_cmd(description, info_cmd, args):
     ap = argparse.ArgumentParser(description=description)
     ap.add_argument('executable', metavar='EXECUTABLE', help='executable file to examine')
