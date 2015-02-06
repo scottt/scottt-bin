@@ -1,38 +1,72 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Install the source code of any file from Fedora, e.g.:
 # $ src-install /bin/true
 # Downloads, extracts and patches the source containing /bin/true in the current working directory
+#
+# Package names work as well
+# $ src-install coreutils
+# Downloads, extracts and patches the source of the "coreutils" package
 
 import sys
 import os
 import glob
 import optparse
 import subprocess
+import tempfile
 
-def main(args):
-    op = optparse.OptionParser(usage='usage: %prog FILE-FROM-OPERATING-SYSTEM',
-                               option_list = [
-                                   optparse.Option('-d', '--install-build-deps',
-                                                   action='store_true',
-                                                   help='install build dependencies'),
-                              ])
-    (options, args) = op.parse_args(args)
+class YumHelper:
+    def download_src_pkg(self, pkg):
+        subprocess.check_call(['yumdownloader', '--source', pkg])
 
-    try:
-        (filename,) = args
-    except ValueError:
-        op.print_usage()
-        sys.exit(2)
+    def repoquery_src_pkg(self, pkg):
+        with tempfile.TemporaryFile(mode='w+') as tf:
+            subprocess.check_call(['repoquery', '--queryformat', '%{sourcerpm}', pkg], stdout=tf)
+            tf.seek(0)
+            out = tf.read()
+        l = out.split('\n')
+        l.sort(reverse=True)
+        return l[0]
 
+class DnfHelper:
+    def download_src_pkg(self, pkg):
+        subprocess.check_call(['dnf', 'download', '--source', pkg])
+
+    def repoquery_src_pkg(self, pkg):
+        with tempfile.TemporaryFile(mode='w+') as tf:
+            subprocess.check_call(['dnf', 'repoquery', '--queryformat', '%{sourcerpm}', pkg], stdout=tf)
+            tf.seek(0)
+            out = tf.read()
+        l = out.split('\n')
+        l.sort(reverse=True)
+        return l[0]
+
+def src_install(filename, options):
     p = subprocess.Popen(['rpmquery', '-f', '--queryformat', '%{name} %{sourcerpm}',
-                          filename], stdout=subprocess.PIPE)
+                          filename], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     data = p.stdout.read()
-    (pkg, src_pkg) = data.split()
-    p.wait()
-    subprocess.check_call(['yumdownloader', '--source', pkg])
+    try:
+        (pkg, src_pkg) = data.split()
+    except ValueError:
+        if os.path.exists(filename):
+            sys.stderr.write('file "%s" is not part of any system package\n' % (filename,))
+            sys.exit(0)
+        (pkg, src_pkg) = (filename, None)
+    else:
+        p.wait()
+
+    if options.yum:
+        pkg_helper = YumHelper()
+    else:
+        pkg_helper = DnfHelper()
+
+    pkg_helper.download_src_pkg(pkg)
+
+    if src_pkg is None:
+        src_pkg = pkg_helper.repoquery_src_pkg(pkg)
+
     p = subprocess.Popen(['rpmquery', '-pl', src_pkg], stdout=subprocess.PIPE)
-    spec_filename = [ x[:-1] for x in p.stdout.readlines() if x.endswith('.spec\n') ][0]
+    spec_filename = [ x[:-1] for x in p.stdout.readlines() if x.endswith(b'.spec\n') ][0]
     p.wait()
     pwd = os.getcwd()
     rpm_dir_defines = [
@@ -48,6 +82,25 @@ def main(args):
     if not options.install_build_deps:
         rpmbuild_prepare.append('--nodeps')
     subprocess.check_call(rpmbuild_prepare + [spec_filename])
+
+def main(args):
+    op = optparse.OptionParser(usage='usage: %prog FILE-FROM-OPERATING-SYSTEM | PKG',
+                               option_list = [
+                                   optparse.Option('-d', '--install-build-deps',
+                                                   action='store_true',
+                                                   help='install build dependencies'),
+                                   optparse.Option('--yum',
+                                                   action='store_true',
+                                                   help='use YUM instead of DNF'),
+                              ])
+    (options, args) = op.parse_args(args)
+
+    if not args:
+        op.print_usage()
+        sys.exit(2)
+
+    for i in args:
+        src_install(i, options)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
