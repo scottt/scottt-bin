@@ -327,8 +327,12 @@ def gdb_info_cmd(description, info_cmd, args):
     gdb = gdb_command_name()
     cmd = [
         'file '+ args.executable,
-        'info ' + info_cmd,
     ]
+    if unknown_args:
+        cmd.append('info %s %s' % (info_cmd, unknown_args[0]))
+    else:
+        cmd.append('info %s' % (info_cmd, ))
+
     try:
         o = gdb_batch(gdb, cmd)
     except ValueError as e:
