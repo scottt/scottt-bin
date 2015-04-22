@@ -5,7 +5,8 @@ C/C++
 ===
 
 * cc-defines -- dump gcc's builtin macro definitions
-* cc-config -- dump gcc's build configuration. Useful when cross compiling.
+* cc-linker-script -- dump gcc's default linker script
+* cc-config -- dump gcc's build configuration. Useful when examining vendor cross compiler toolchains.
 * compilefunc -- generate assembler output on STDOUT for specified functions
 * gdbdis -- disassmble a function or memory range through GDB
 * gdbx -- examine memory through GDB
@@ -62,6 +63,7 @@ System Administration
 * iptables-allow-mdns-over-host-nat -- allow mDNS (avahi) over host NAT mostly for libvirt VMs.
 * iptables-reject-hinet-youtube-servers -- workaround to get faster YouTube connections in Taiwan
 * iptables-reject-slow-akaimai-bloomberg-tv -- workaround for watching bloomberg.com/tv in Taiwan
+* iptables-list-INPUT -- list firewall input rules
 * ntp-sync -- sync system time through NTP
 * disk-{scan,deactivate} -- useful for eSATA hotplug. Nicer than scsi-rescan in sg3_utils.
 * git-repo-add-email-notifications -- configures email notification in git repositories.
@@ -111,6 +113,7 @@ Audio / Video Encoding and Conversion
 Miscellaneous
 ===
 
+* imgs-to-pdf -- convert bitmap images to a multipage PDF
 * pdf-pages -- merge multiple pages from a source PDF into one
 * gnome-recently-used-clear -- clear the recently used files list in GNOME
 * alarm -- play an alarm sound
