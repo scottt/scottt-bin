@@ -1,2 +1,5 @@
 #!/bin/sh
+
+# List firewall input filtering rules
+
 sudo iptables -vL INPUT
