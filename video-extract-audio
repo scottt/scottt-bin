@@ -7,8 +7,9 @@ import sys
 import os
 import subprocess
 import errno
+import optparse
 
-def video_leave_audio(filename):
+def video_extract_audio(filename, options):
     # Outline for reasonable implementation
     # Detect audio streams in file
     # $ ffmpeg -i INPUT-FILE
@@ -17,26 +18,43 @@ def video_leave_audio(filename):
     # keep A/V container format
     # $ ffmpeg -i INPUT-FILE -map 0:1 -acodec copy OUTPUT-FILE
 
-    # Preserve metadata if possible
+    # TODO: Preserve metadata if possible
 
-    if filename.endswith('.mp4'):
-        new_ext = '.m4a'
+    container_ext_to_audio_only_ext = {
+        '.mp4': '.m4a',
+        '.mkv': '.mka',
+
+        # can't find any audio-only extensions for WebM http://www.webmproject.org/docs/container/
+        # Need an extension known to ffmpeg to avoid "Unable to find a suitable output format for t.EXT" errors
+        '.webm': '.audio-only.webm',
+    }
+
+    if options.out_filename is not None: 
+        out_filename = options.out_filename
     else:
-        new_ext = '.UNKNOWN-FORMAT'
-    out_filename = os.path.splitext(filename)[0] + new_ext
+        (basename, ext) = os.path.splitext(filename)
+        new_ext = container_ext_to_audio_only_ext.get(ext)
+        if new_ext is None:
+            raise ValueError('Unknown file format \"%s\"' % (filename,))
+        out_filename = basename + new_ext
 
+    # avoid overwriting input file
+    assert(out_filename != filename)
     # FIXME: hardcoding for youtube-dl
     file_stream = '0:1' # 2nd stream of 1st file
     subprocess.check_call(['ffmpeg',
+                           '-y', # overwrite output files
                            '-i', filename,
                            '-map', file_stream,
                            '-acodec', 'copy',
                            out_filename])
 
 def main(args):
+    p = optparse.OptionParser(option_list=[optparse.Option('-o', '--output', help='output file', dest='out_filename')])
+    (options, args) = p.parse_args(args)
     for i in args:
         try:
-            video_leave_audio(i)
+            video_extract_audio(i, options)
         except OSError as e:
             if e.errno != errno.ENOENT:
                 raise
