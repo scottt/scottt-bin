@@ -106,6 +106,8 @@ Audio / Video Encoding and Conversion
 * sine-wave-save -- save a sine wave test sound pattern as a RAW or WAV file
 * video-extract-audio -- extract audio streams from video files for (rough, useful for
   music videos from YouTube)
+* audio-transcode-for-google-music -- transcode audio files not support by Google Music to a
+  suitable format.
 * ffmpeg-webm-360p -- convert video to the WebM format through ffmpeg
 * flv-to-mp3 -- covnert audio tracks in FLV to an MP3
 * pulseaudio-rtp-serve -- broadcast audio from Linux through RTP in PCM or MP3 format
