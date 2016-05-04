@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+
+msg = '''Print the 'install name' of a shared library or framework (similar to SONAME on ELF)
+'''
+
+import sys
+import os
+import subprocess
+
+def program_name():
+    return os.path.basename(sys.argv[0])
+
+args = sys.argv[1:]
+try:
+    (macho_binary, ) = args
+except ValueError:
+    sys.stderr.write('usage: %s MACHO_BINARY\n' % (program_name(),))
+    sys.exit(2)
+
+r = subprocess.call(['otool', '-D', macho_binary])
+sys.exit(r)

@@ -14,6 +14,12 @@ C/C++
 * gdb-info-{functions,variables,types} -- show functions, variables etc through GDB
 * function-is-not-used
 
+OSX/iOS
+===
+* otool-rpath -- print the RPATH from a Mach-O binary
+* otool-needed -- print the shared libraries and frameworks required by a Mach-O binary
+* otool-install-name -- print the INSTALL NAME of a shared library or framework (similar to a SONAME)
+
 Software Development
 ===
 
