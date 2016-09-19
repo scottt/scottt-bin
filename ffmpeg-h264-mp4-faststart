@@ -1,0 +1,111 @@
+#!/usr/bin/env python
+
+import sys
+import os
+import posix
+import optparse
+import subprocess
+
+main_function_map = {}
+
+def main_function(func):
+    global main_function_map
+    main_function_map[func.__name__.replace('_','-')] = func
+    return func
+
+# Transcode video into H264 in MP4 using ffmpeg
+# $ ffmpeg-h264-mp4-faststart f0.avi f1.wmv
+@main_function
+def ffmpeg_h264_mp4_faststart(args):
+    op = optparse.OptionParser(usage='usage: %prog FILE...', option_list=[
+        optparse.Option('--audio-bitrate', default='161k', help='AAC audio bitrate'),
+    ])
+    (options, args) = op.parse_args(args)
+    if not args:
+        op.print_usage()
+        sys.exit(2)
+
+    ncpu = posix.sysconf('SC_NPROCESSORS_ONLN')
+
+    new_ext = '.mp4'
+    for filename in args:
+        output_filename = os.path.splitext(os.path.basename(filename))[0] + new_ext
+        if os.path.realpath(output_filename) == os.path.realpath(filename):
+            output_filename = os.path.splitext(os.path.basename(filename))[0] + '.1' + new_ext
+        subprocess.check_call(['ffmpeg', '-i', filename,
+                               '-c:v', 'libx264',
+                               '-preset', 'medium',
+                               #'-strict', 'experimental', # for AAC encoding
+                               '-c:a', 'aac',
+                               '-b:a', str(options.audio_bitrate),
+                               '-threads', str(ncpu),
+                               '-movflags', '+faststart',
+                               '-y', output_filename])
+
+# Transcode video into H264 in MKV using ffmpeg
+# $ ffmpeg-h264-mkv test0.avi test1.wmv
+@main_function
+def ffmpeg_h264_mkv(args):
+    op = optparse.OptionParser(usage='usage: %prog FILE...', option_list=[
+#        optparse.Option('--audio-bitrate', default='161k', help='AAC audio bitrate'),
+    ])
+    (options, args) = op.parse_args(args)
+    if not args:
+        op.print_usage()
+        sys.exit(2)
+
+    ncpu = posix.sysconf('SC_NPROCESSORS_ONLN')
+
+    new_ext = '.mkv'
+    for filename in args:
+        output_filename = os.path.splitext(os.path.basename(filename))[0] + new_ext
+        if os.path.realpath(output_filename) == os.path.realpath(filename):
+            output_filename = os.path.splitext(os.path.basename(filename))[0] + '.1' + new_ext
+        subprocess.check_call(['ffmpeg', '-i', filename,
+                               '-c:v', 'libx264',
+                               '-preset', 'slow',
+                               #'-crf', '23',
+                               #'-strict', 'experimental', # for AAC encoding
+                               #'-c:a', 'aac',
+                               #'-b:a', str(options.audio_bitrate),
+                               '-c:a', 'copy',
+                               '-threads', str(ncpu),
+                               '-y', output_filename])
+
+# Transcode video into WebM 360p format using ffmpeg
+# $ ffmpeg-webm-360p f0.mov
+@main_function
+def ffmpeg_webm_360p(args):
+    op = optparse.OptionParser(usage='usage: %prog FILE...', option_list=[
+    ])
+    (options, args) = op.parse_args(args)
+    if not args:
+        op.print_usage()
+        sys.exit(2)
+
+    ncpu = posix.sysconf('SC_NPROCESSORS_ONLN')
+
+    new_ext = '.webm'
+    for filename in args:
+        output_filename = os.path.splitext(os.path.basename(filename))[0] + new_ext
+        if os.path.realpath(output_filename) == os.path.realpath(filename):
+            output_filename = os.path.splitext(os.path.basename(filename))[0] + '.1' + new_ext
+    subprocess.check_call(['ffmpeg', '-i', filename,
+                           '-vpre', 'libvpx-360p',
+                           '-b', '380k',
+                           '-threads', str(ncpu),
+                           '-y', output_filename])
+
+def main_function_dispatch(name, args):
+    try:
+        f = main_function_map[name]
+    except KeyError:
+        sys.stderr.write('%s is not a valid command name\n' % (name,))
+        sys.exit(2)
+    f(args)
+
+def program_name():
+    return os.path.basename(sys.argv[0])
+
+if __name__ == '__main__':
+    main_function_dispatch(program_name(), sys.argv[1:])

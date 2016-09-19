@@ -1,0 +1,9 @@
+#!/bin/sh
+
+case $# in
+0) printf 'usage moov-faststart-optimize MP4_FILE [...]\n'>&2; exit 2;;
+esac
+
+for i in $*; do
+	ffmpeg -i "$i" -movflags faststart -vcodec copy -acodec copy "$i".faststart.mp4
+done

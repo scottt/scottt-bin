@@ -115,6 +115,8 @@ Audio / Video Encoding and Conversion
   music videos from YouTube)
 * audio-transcode-for-google-music -- transcode audio files not support by Google Music to a
   suitable format.
+* ffmpeg-h264-mp4-faststart -- convert video to the H264 in MP4 format optimized for streaming
+* ffmpeg-h264-mkv -- convert video to H264 in MKV format
 * ffmpeg-webm-360p -- convert video to the WebM format through ffmpeg
 * flv-to-mp3 -- covnert audio tracks in FLV to an MP3
 * pulseaudio-rtp-serve -- broadcast audio from Linux through RTP in PCM or MP3 format
