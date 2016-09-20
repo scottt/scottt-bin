@@ -1,0 +1,5 @@
+#!/bin/sh
+
+# We want the qt-faststart from https://github.com/danielgtaylor/qtfaststart
+# NOTE: ffmpeg ships a simularly named executable called qt-fastsart
+qtfaststart -l $@
