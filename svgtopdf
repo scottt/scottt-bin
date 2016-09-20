@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+import subprocess
+import optparse
+
+def program_name():
+    return os.path.basename(sys.argv[0])
+
+def main(args):
+    op = optparse.OptionParser(usage='%prog SVG_FILE [...]')
+    (options, args) = op.parse_args(args)
+    for i in args:
+        o = os.path.splitext(i)[0] + '.pdf'
+        r = subprocess.call(['inkscape', '--file=%s' % (i,), '--export-area-drawing', '--without-gui', '--export-pdf=%s' % (o,)])
+        if r != 0:
+            sys.stderr.write('%s: failed to convert "%s"\n' % (program_name(), i))
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
