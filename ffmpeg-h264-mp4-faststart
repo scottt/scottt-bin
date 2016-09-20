@@ -13,6 +13,49 @@ def main_function(func):
     main_function_map[func.__name__.replace('_','-')] = func
     return func
 
+# Using an Intel GPU through VAAPI, transcode video into H264 in MP4
+# $ ffmpeg-intel-gpu-h264-mp4 f0.avi f1.wmv
+# NOTE: causes desktop hangs
+@main_function
+def ffmpeg_intel_gpu_h264_mp4(args):
+    # https://ffmpeg.org/pipermail/ffmpeg-user/2016-May/032153.html
+    op = optparse.OptionParser(usage='usage: %prog FILE...', option_list=[
+        optparse.Option('--audio-bitrate', default='161k', help='AAC audio bitrate'),
+        optparse.Option('--vaapi-device', default=None, help='X11 display or DRM render node'),
+    ])
+    (options, args) = op.parse_args(args)
+    if not args:
+        op.print_usage()
+        sys.exit(2)
+
+    
+    if options.vaapi_device:
+        vaapi_device = options.vaapi_device
+    elif os.getenv('DISPLAY'):
+        vaapi_device = os.getenv('DISPLAY')
+    else:
+        l = glob.glob('/dev/dri/render*')
+        if not l:
+            sys.stderr.write("Can't determine vaapi device. Explicitly pass an option like '--vaapi-device /dev/dri/renderD12'.\n")
+            sys.exit(2)
+        vaapi_device = l[0]
+
+    new_ext = '.mp4'
+    for filename in args:
+        output_filename = os.path.splitext(os.path.basename(filename))[0] + new_ext
+        if os.path.realpath(output_filename) == os.path.realpath(filename):
+            output_filename = os.path.splitext(os.path.basename(filename))[0] + '.1' + new_ext
+        subprocess.check_call(['ffmpeg',
+                               '-vaapi_device', vaapi_device,
+                               '-i', filename,
+                               '-vf', 'format=nv12,hwupload',
+                               '-c:v', 'h264_vaapi',
+                               '-c:a', 'aac',
+                               '-b:a', str(options.audio_bitrate),
+                               '-movflags', '+faststart',
+                               '-y', output_filename])
+
+
 # Transcode video into H264 in MP4 using ffmpeg
 # $ ffmpeg-h264-mp4-faststart f0.avi f1.wmv
 @main_function
@@ -25,8 +68,6 @@ def ffmpeg_h264_mp4_faststart(args):
         op.print_usage()
         sys.exit(2)
 
-    ncpu = posix.sysconf('SC_NPROCESSORS_ONLN')
-
     new_ext = '.mp4'
     for filename in args:
         output_filename = os.path.splitext(os.path.basename(filename))[0] + new_ext
@@ -35,10 +76,8 @@ def ffmpeg_h264_mp4_faststart(args):
         subprocess.check_call(['ffmpeg', '-i', filename,
                                '-c:v', 'libx264',
                                '-preset', 'medium',
-                               #'-strict', 'experimental', # for AAC encoding
                                '-c:a', 'aac',
                                '-b:a', str(options.audio_bitrate),
-                               '-threads', str(ncpu),
                                '-movflags', '+faststart',
                                '-y', output_filename])
 
