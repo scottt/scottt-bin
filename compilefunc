@@ -7,7 +7,7 @@ Supports the CC, CFLAGS, CXX, CXXFLAGS, LDFLAGS and GDB environment variables.
 Unknown options are passed to the compiler.
 Invokes gcc or g++ depending on the file extension.
 
-    $ CFLAGS='-O0' compilefunc -l var-arg.c main
+    $ CFLAGS='-O0' compilefunc --do-link var-arg.c main
        0x000000000040067b <+0>: push   %rbp
        0x000000000040067c <+1>: mov    %rsp,%rbp
        0x000000000040067f <+4>: movsd  0xc9(%rip),%xmm0        # 0x400750
@@ -18,7 +18,7 @@ Invokes gcc or g++ depending on the file extension.
        0x000000000040069b <+32>:    mov    $0x0,%eax
        0x00000000004006a0 <+37>:    pop    %rbp
        0x00000000004006a1 <+38>:    retq   
-    $ CFLAGS='-Os' compilefunc -l var-arg.c main
+    $ CFLAGS='-Os' compilefunc --do-link var-arg.c main
        0x0000000000400440 <+0>: push   %rax
        0x0000000000400441 <+1>: mov    $0x1,%esi
        0x0000000000400446 <+6>: mov    $0x400674,%edi
@@ -28,7 +28,7 @@ Invokes gcc or g++ depending on the file extension.
        0x000000000040045a <+26>:    xor    %eax,%eax
        0x000000000040045c <+28>:    pop    %rdx
        0x000000000040045d <+29>:    retq   
-    $ CFLAGS='-O3' compilefunc -l var-arg.c main
+    $ CFLAGS='-O3' compilefunc --do-link var-arg.c main
        0x0000000000400440 <+0>: sub    $0x8,%rsp
        0x0000000000400444 <+4>: mov    $0x1,%esi
        0x0000000000400449 <+9>: mov    $0x400694,%edi
