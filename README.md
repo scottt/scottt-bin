@@ -7,6 +7,7 @@ C/C++
 * cc-defines -- dump gcc's builtin macro definitions
 * cc-linker-script -- dump gcc's default linker script
 * cc-config -- dump gcc's build configuration. Useful when examining vendor cross compiler toolchains.
+* cc-compile -- compile progam from STDIN and print assembly to STDOUT
 * compilefunc -- generate assembler output on STDOUT for specified functions
 * gdbdis -- disassmble a function or memory range through GDB
 * gdbx -- examine memory through GDB
