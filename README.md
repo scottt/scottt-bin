@@ -28,6 +28,7 @@ Software Development
 * lsof-listening -- list programs listening for TCP connections
 * lsof-udp -- list programs bound to UDP ports
 * http-static-server -- HTTP server that serves static content in CWD
+* git-clean -- delete files not tracked by git
 
 Python
 ===
