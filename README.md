@@ -43,6 +43,7 @@ Command Line / Shell Scripting
 
 * clipboard-print -- print X11 clipboard to STDOUT
 * clipboard-zh-tw-quote -- add Taiwanese style quotation marks to clipboard content
+* clipboard-html-escape -- convert '&', '<', '>' to HTML-safe sequences
 * clipboard-copy -- copy file content to X11 clipboard
 * clipboard-open-file-line -- open $EDITOR to filename:line in X11 clipboard
 * argv-print -- debug command line argument passing in scripts
