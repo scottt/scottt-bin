@@ -12,7 +12,7 @@ C/C++
 * gdbdis -- disassmble a function or memory range through GDB
 * gdbx -- examine memory through GDB
 * gdb-info-scope -- Use gdb to list the variables local to a scope.  Shows DWARF debug info.
-* gdb-info-{functions,variables,types} -- show functions, variables etc through GDB
+* gdb-info-{functions,variables,types,line} -- show functions, variables etc through GDB
 * function-is-not-used
 
 OSX/iOS

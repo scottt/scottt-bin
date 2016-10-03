@@ -352,5 +352,9 @@ def gdb_info_variables(args):
 def gdb_info_types(args):
     gdb_info_cmd('list types from EXE', 'types', args)
 
+@main_function
+def gdb_info_line(args):
+    gdb_info_cmd('source and memory addresses for a source location from EXE', 'line', args)
+
 if __name__ == '__main__':
     main_function_dispatch(program_name(), sys.argv[1:])
