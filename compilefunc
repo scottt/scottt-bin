@@ -154,6 +154,8 @@ def gdb_batch_disassemble(gdb_cmd, exe, functions, options):
     cmd = [
         ('file %s' % (exe,)),
     ]
+    if options.demangle:
+        cmd.append('set print asm-demangle')
     for i in functions:
         if not options.no_special_symbol_quoting:
             #"printf@plt" -> "'printf@plt'"
@@ -247,10 +249,12 @@ def gdbdis(args):
     ap.add_argument('-s', '--source', action='store_true', help='include source lines'),
     ap.add_argument('--no-header', action='store_true', 
                     help="don't show \"Dump of ...\" headers and footers even when disassembling multiple functions")
-    # --no-special-symbol-escapes: created so that by default,
+    # --no-special-symbol-quoting: created so that by default,
     # you don't need to do e.g. "'printf@plt'" from the shell to pass in PLT functions
     ap.add_argument('--no-special-symbol-quoting', action='store_true', default=False,
                     help='disable auto quoiting of symbols that ends with @plt')
+    ap.add_argument('--demangle', action='store_true', default=False,
+                    help='demangle C++ names in disassembly listings')
     (args, unknown_args) = ap.parse_known_args(args)
 
     if len(args.functions) == 1:
