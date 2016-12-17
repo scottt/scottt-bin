@@ -9,6 +9,7 @@ import sys
 import os
 import subprocess
 import optparse
+import cgi
 
 try:
     import pygtk
@@ -53,6 +54,25 @@ def clipboard_zh_tw_quote(args):
     t = t.replace('」', '』')
 
     t = ''.join(['「' , t, '」'])
+    clipboard_set_text(t, 'CLIPBOARD')
+
+@main_function
+def clipboard_html_escape(args):
+
+    def print_usage_xit():
+        sys.stderr.write('usage: %s [FILE]\n' % (program_name(),))
+        sys.exit(2)
+
+    op = optparse.OptionParser()
+    (options, args) = op.parse_args(args)
+    if len(args) == 0:
+        t = clipboard_get_text('PRIMARY')
+    elif len(args) == 1:
+        t = open(args[0]).read()
+    else:
+        print_usage_exit()
+
+    t = cgi.escape(t)
     clipboard_set_text(t, 'CLIPBOARD')
 
 def main(args):
