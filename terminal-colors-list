@@ -1,0 +1,9 @@
+#!/bin/sh
+
+# https://wiki.archlinux.org/index.php/Bash/Prompt_customization#Colors
+for C in $(seq 0 $(($(tput colors)-1))); do
+    tput setab $C
+    printf '%3d ' $C
+done
+tput sgr0
+echo

@@ -63,6 +63,8 @@ Command Line / Shell Scripting
 * slice -- print a subset of lines from STDIN like head(1) or tail(1)
 * vim-pager -- use vim as a pager like more(1)
 * xdg-rename-by-content -- change file extension to match file type detected from content
+* terminal-colors-list -- list colors supported by terminal
+* prompt-str-gen -- generate a str with terminal underline and color control codes
 
 System Administration
 ===

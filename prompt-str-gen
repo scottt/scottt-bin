@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+
+#$ PROMPT=$(prompt-str-gen --underline --background-color 33 MY-MSG)
+#$ echo $PROMPT_STR
+# MY-MSG
+
+# For implementation notes, see
+# https://wiki.archlinux.org/index.php/Bash/Prompt_customization#Colors
+
+import sys
+import tempfile
+import subprocess
+import argparse
+
+def cmd_output(args_list):
+    t = ''
+    with tempfile.TemporaryFile(mode='w+') as tf:
+        subprocess.check_call(args_list, stdout=tf)
+        tf.seek(0)
+        t = tf.read()
+    return t
+
+def main(args):
+    p = argparse.ArgumentParser()
+    p.add_argument('--underline', action='store_true')
+    p.add_argument('--background-color', type=int)
+    p.add_argument('--debug', action='store_true')
+    p.add_argument('msg', nargs='+')
+
+    args = p.parse_args(args)
+
+    out = []
+    if args.underline:
+        out.append(cmd_output(['tput', 'smul']))
+
+    if args.background_color is not None:
+        out.append(cmd_output(['tput', 'setab', '%d' % (args.background_color,)]))
+
+    if args.msg is not None:
+        out.extend(args.msg)
+
+    out.append(cmd_output(['tput', 'sgr0']))
+
+    if args.debug:
+        sys.stdout.write(repr(out))
+        sys.stdout.write('\n')
+        sys.exit(0)
+
+    sys.stdout.write(''.join(out))
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
