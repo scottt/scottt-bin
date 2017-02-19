@@ -34,7 +34,7 @@ def dgin(args):
 
 @main_function
 def dupdate(args):
-    r = subprocess.call(['sudo', 'dnf', 'update', '-y'] + args)
+    r = subprocess.call(['sudo', 'dnf', 'update', '-y', '--best', '--allowerasing'] + args)
     sys.exit(r)
 
 @main_function
