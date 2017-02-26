@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# Fedora 25
+sudo /usr/libexec/initscripts/legacy-actions/iptables/save

@@ -76,6 +76,7 @@ System Administration
 * iptables-reject-hinet-youtube-servers -- workaround to get faster YouTube connections in Taiwan
 * iptables-reject-slow-akaimai-bloomberg-tv -- workaround for watching bloomberg.com/tv in Taiwan
 * iptables-list-INPUT -- list firewall input rules
+* iptables-save -- save iptables rules across reboots
 * ntp-sync -- sync system time through NTP
 * disk-{scan,deactivate} -- useful for eSATA hotplug. Nicer than scsi-rescan in sg3_utils.
 * git-repo-add-email-notifications -- configures email notification in git repositories.
