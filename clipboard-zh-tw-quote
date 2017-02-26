@@ -72,7 +72,8 @@ def clipboard_html_escape(args):
     else:
         print_usage_exit()
 
-    t = cgi.escape(t)
+    if t:
+        t = cgi.escape(t)
     clipboard_set_text(t, 'CLIPBOARD')
 
 def main(args):
