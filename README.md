@@ -71,7 +71,7 @@ System Administration
 
 * remote-domain-socket-proxy -- connect to a remote Unix domain socket through a local one.
   e.g. MySQL remote administration.
-* iptables-allow-{daap,http,mdns,nfsv4,samba,ssh,soundwire} -- open port(s) with iptables
+* iptables-allow-{daap,http,mdns,nfsv4,samba,ssh,soundwire,steam} -- open port(s) with iptables
 * iptables-allow-mdns-over-host-nat -- allow mDNS (avahi) over host NAT mostly for libvirt VMs.
 * iptables-reject-hinet-youtube-servers -- workaround to get faster YouTube connections in Taiwan
 * iptables-reject-slow-akaimai-bloomberg-tv -- workaround for watching bloomberg.com/tv in Taiwan

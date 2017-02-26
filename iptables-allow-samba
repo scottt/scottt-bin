@@ -11,7 +11,9 @@ import subprocess
 import optparse
 
 # Samba (see "Using a firewall" in http://www.samba.org/samba/docs/server_security.html):
+#        https://www.samba.org/samba/docs/man/Samba-HOWTO-Collection/securing-samba.html
 SAMBA_PORTS = [
+    ('tcp', 135), # used by smbd
     ('udp', 137), # used by nmbd
     ('udp', 138), # used by nmbd
     ('tcp', 139), # used by smbd
@@ -46,12 +48,23 @@ SOUNDWIRE_PORTS = [
     ('udp', 59011),
 ]
 
+# https://support.steampowered.com/kb_article.php?ref=3629-RIAV-1617<Paste>
+# "What network ports does streaming use?
+# Streaming uses UDP ports 27031 and 27036 and TCP ports 27036 and 27037.
+# Please make sure Steam can listen on these ports in your firewall software."
+STEAM_PORTS = [
+    ('udp', 27031),
+    ('udp', 27036),
+    ('tcp', 27036),
+    ('tcp', 27037),
+]
+
 # TODO: DLNA?
 
 def iptables_allow(ports, interface=None):
     cmd = [ 'sudo', 'iptables' ]
     if interface is not None:
-        cmd += [ '-i', inteface ]
+        cmd.extend([ '-i', interface ])
 
     for (tcp_udp, dport) in ports:
         subprocess.check_call(cmd + ['-I', 'INPUT', '1',
@@ -118,7 +131,15 @@ def iptables_allow_soundwire(args):
         optparse.Option('-i', '--interface', default=None),
     ])
     (options, args) = op.parse_args(args)
-    iptables_allow(HTTP_PORTS, options.interface)
+    iptables_allow(SOUNDWIRE_PORTS, options.interface)
+
+@main_function
+def iptables_allow_steam(args):
+    op = optparse.OptionParser(option_list = [
+        optparse.Option('-i', '--interface', default=None),
+    ])
+    (options, args) = op.parse_args(args)
+    iptables_allow(STEAM_PORTS, options.interface)
 
 def main_function_dispatch(name, args):
     try:
