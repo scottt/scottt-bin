@@ -2,4 +2,4 @@
 
 # List firewall input filtering rules
 
-sudo iptables -vL INPUT
+sudo iptables -vL INPUT --line-numbers
