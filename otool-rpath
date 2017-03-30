@@ -88,7 +88,6 @@ def otool_load_commands_parse(lines):
             for x in i:
                 f = line_to_fields_pair(x)
                 if len(f) != 2:
-                    import IPython;IPython.embed()
                     raise ValueError
             o = dict([line_to_fields_pair(x) for x in i])
         out.append(o)
