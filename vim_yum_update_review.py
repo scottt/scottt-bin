@@ -13,19 +13,23 @@ def version_start_index(s):
             return i
     raise ValueError
 
-# assume input in format:
 # Supported input formats:
 # 1. /var/log/yum.log
-# Mar 23 05:37:10 Updated: system-config-printer-0.7.82.1-3.fc9.x86_64
+#    Mar 23 05:37:10 Updated: system-config-printer-0.7.82.1-3.fc9.x86_64
 # 2. /var/log/dnf.rpm.log
-# Mar 13 18:00:25 INFO Installed: systemd-python3-208-15.fc20.x86_64
+#   Mar 13 18:00:25 INFO Installed: systemd-python3-208-15.fc20.x86_64
+# 3. /varlog/dnf.rpm.log
+#   2017-07-21T02:31:43Z INFO Upgraded: mesa-libOSMesa-17.1.5-1.fc26.i686
+
 def package_version_arch_from_line(line):
     f = line.split()
 
-    if f[3] == 'INFO':
-        package_field_index = 5
+    if f[1] == 'INFO': # format 3
+        package_field_index = 3
+    elif f[3] == 'INFO':
+        package_field_index = 5 # format 2
     else:
-        package_field_index = 4
+        package_field_index = 4 # format 1
     t = f[package_field_index]
     d = version_start_index(t)
     # handle Epoch:Package, ex:
