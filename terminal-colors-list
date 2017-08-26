@@ -1,9 +1,12 @@
 #!/bin/sh
 
 # https://wiki.archlinux.org/index.php/Bash/Prompt_customization#Colors
+# For terminfo capabilities, see terminfo(5) and http://linuxcommand.org/lc3_adv_tput.php
+#	setab: Set Background Color
+#	sgr0:  Turn Off All Attributes
 for C in $(seq 0 $(($(tput colors)-1))); do
     tput setab $C
     printf '%3d ' $C
 done
 tput sgr0
-echo
+printf '\n'
