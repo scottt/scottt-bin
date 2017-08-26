@@ -1,7 +1,7 @@
 Scott Tsai's $HOME/bin
 =
 
-C/C++
+C / C++
 ===
 
 * cc-defines -- dump gcc's builtin macro definitions
@@ -14,8 +14,9 @@ C/C++
 * gdb-info-scope -- Use gdb to list the variables local to a scope.  Shows DWARF debug info.
 * gdb-info-{functions,variables,types,line} -- show functions, variables etc through GDB
 * function-is-not-used
+* dwarf-analyze-gcc-switches -- analyze which files where compiled with what flags when `-grecord-gcc-switches` is used
 
-OSX/iOS
+OSX / iOS
 ===
 * otool-rpath -- print the RPATH from a Mach-O binary
 * otool-needed -- print the shared libraries and frameworks required by a Mach-O binary

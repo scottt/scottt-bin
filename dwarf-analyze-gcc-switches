@@ -1,0 +1,300 @@
+#!/usr/bin/env python3
+
+# $ dwarf-analyze-gcc-switches ELF_FILE
+# $ dwarf-analyze-gcc-switches --json-output OUT.json ELF_FILE
+
+# Example:
+# $ dwarf-analyze-gcc-switches /usr/lib/debug/lib64/ld-linux-x86-64.so.2.debug 
+#    'C99' compilation common prefix: 'GNU C11 7.1.1 20170622 (Red Hat 7.1.1-3) -mtune=generic -m'
+#    'C99' files compiled with 'no-mmx -march=x86-64 -g -O3 -std=gnu11 ...':
+#      /usr/src/debug/glibc-2.25-46-g02aaa3c749/elf/rtld.c
+#      ...
+#    All 'Assembler' files were compiled with 'GNU AS 2.27'
+#
+# JSON Output:
+# $ dwarf-analyze-gcc-switches --json-output t.json /usr/lib/debug/lib64/ld-linux-x86-64.so.2.debug
+#{ "C99" : {
+#      "GNU C11 7.1.1 20170622 (Red Hat 7.1.1-3) -mtune=generic -mno-mmx ...'
+#         "/usr/src/debug/glibc-2.25-46-g02aaa3c749/elf/dl-tunables.c"
+#         ....
+#      ]
+#   },
+#   "Assembler" : {
+#      "GNU AS 2.27" : [
+#         "/usr/src/debug/glibc-2.25-46-g02aaa3c749/elf/../sysdeps/x86_64/dl-trampoline.h",
+#          ...
+#      ]
+#   }
+#}
+
+
+# Requires pyelftools ("pip3 install --user pyselftools")
+# Analyzes compiler swtiches in DW_AT_producer debug infor records
+# for all compilation units.
+#
+# These are prodced by gcc when the'-grecord-gcc-switches' compiler option is used. See:
+#   [GCC](https://gcc.gnu.org/onlinedocs/gcc/Debugging-Options.html)
+#   [Clang](https://clang.llvm.org/docs/ClangCommandLineReference.html#debug-information-flags)
+#   [ICC](https://software.intel.com/en-us/node/682654?language=en)
+
+# TODO
+# 1. Support [Alternate debug sections](http://www.dwarfstd.org/ShowIssue.php?issue=120604.1)
+# 2. Support [-gsplit-dwarf seprate .dwo "fission" debug info](https://gcc.gnu.org/wiki/DebugFission)
+
+import sys
+import os
+import enum
+import argparse
+import collections
+import json
+
+import elftools.elf.elffile
+
+PROFILING = False
+DEBUG = False
+
+def do_iter_compilation_units(file_obj):
+    ' -> compilation_unit_debug_information_entries ...'
+    ef = elftools.elf.elffile.ELFFile(file_obj)
+    dwarf_info = ef.get_dwarf_info()
+    if dwarf_info is None:
+        return
+
+    DW_TAG_compile_unit = sys.intern('DW_TAG_compile_unit')
+
+    section_offset = dwarf_info.debug_info_sec.global_offset
+    for cu in dwarf_info.iter_CUs():
+        for die in cu.iter_DIEs():
+            if die.tag is DW_TAG_compile_unit:
+                yield die
+
+def iter_compilation_units(filename):
+    with open(filename, 'rb') as f:
+        yield from do_iter_compilation_units(f)
+
+# die.attributes -> OrderedDict([
+#  ('DW_AT_producer',
+#    AttributeValue(name='DW_AT_producer', form='DW_FORM_strp',
+#    value=b'GNU C11 7.1.1 20170622 (Red Hat 7.1.1-3) -mtune=generic -march=x86-64 -g3 -Os', raw_value=8984, offset=12)),
+#  ('DW_AT_language',
+#    AttributeValue(name='DW_AT_language', form='DW_FORM_data1', value=12, raw_value=12, offset=16)),
+#  ('DW_AT_name',
+#    AttributeValue(name='DW_AT_name', form='DW_FORM_strp', value=b'div0.c', raw_value=13874, offset=17)),
+#  ('DW_AT_comp_dir',
+#    AttributeValue(name='DW_AT_comp_dir', form='DW_FORM_strp', value=b'/home/scottt/tmp', raw_value=18544, offset=21)),
+#  ('DW_AT_ranges',
+#    AttributeValue(name='DW_AT_ranges', form='DW_FORM_sec_offset', value=0, raw_value=0, offset=25)),
+#  ('DW_AT_low_pc',
+#    AttributeValue(name='DW_AT_low_pc', form='DW_FORM_addr', value=0, raw_value=0, offset=29)),
+#  ('DW_AT_stmt_list',
+#    AttributeValue(name='DW_AT_stmt_list', form='DW_FORM_sec_offset', value=0, raw_value=0, offset=37)),
+#  (8473, AttributeValue(name=8473, form='DW_FORM_sec_offset', value=0, raw_value=0, offset=41))])
+#
+# Attribute values unknown to pyelftools are passed as ints, e.g. 8473 is 'DW_AT_GNU_macros'
+
+class DW_LANG(enum.IntEnum):
+    C89 = 0x0001
+    C = 0x0002
+    Ada83 = 0x0003
+    C_plus_plus = 0x0004
+    Cobol74 = 0x0005
+    Cobol85 = 0x0006
+    Fortran77 = 0x0007
+    Fortran90 = 0x0008
+    Pascal83 = 0x0009
+    Modula2 = 0x000a
+    # DWARF 3
+    Java = 0x000b
+    C99 = 0x000c
+    Ada95 = 0x000d
+    Fortran95 = 0x000e
+    PLI = 0x000f
+    ObjC = 0x0010
+    ObjC_plus_plus = 0x0011
+    UPC = 0x0012
+    D = 0x0013
+    # DWARF 4
+    Python = 0x0014
+    # DWARF 5
+    Go = 0x0016
+
+    C_plus_plus_11 = 0x001a # dwarf5.20141029.pdf DRAFT
+    Rust = 0x001c
+    C11 = 0x001d
+    C_plus_plus_14 = 0x0021
+    Fortran03 = 0x0022
+    Fortran08 = 0x0023
+
+    lo_user = 0x8000   # Implementation-defined range start.
+    hi_user = 0xffff   # Implementation-defined range start.
+
+    # MIPS, apparently also used by the GNU Assembler
+    Mips_Assembler = 0x8001
+    # UPC
+    Upc = 0x8765
+    # HP extensions
+    HP_Bliss     = 0x8003
+    HP_Basic91   = 0x8004
+    HP_Pascal91  = 0x8005
+    HP_IMacro    = 0x8006
+    HP_Assembler = 0x8007
+
+    # Rust extension replaced in DWARF 5
+    Rust_old = 0x9000
+
+def dwarf_lang_str(lang_code):
+    lang_str = {
+        DW_LANG.C89:    'C89',
+        DW_LANG.C:  'non-ANSI C',
+        DW_LANG.Ada83:  'Ada',
+        DW_LANG.C_plus_plus:    'C++',
+        DW_LANG.Cobol74:    'Cobol 74',
+        DW_LANG.Cobol85:    'Cobol 85',
+        DW_LANG.Fortran77:  'F77',
+        DW_LANG.Fortran90:  'F90',
+        DW_LANG.Pascal83:   'Pascal 83',
+        DW_LANG.Modula2:    'Modula 2',
+        DW_LANG.Java:              'Java',
+        DW_LANG.C99:               'C99',
+        DW_LANG.Ada95:             'ADA 95',
+        DW_LANG.Fortran95:         'F95',
+        DW_LANG.PLI:               'PLI',
+        DW_LANG.ObjC:              'Obj-C',
+        DW_LANG.ObjC_plus_plus:    'Obj-C++',
+        DW_LANG.UPC:               'UPC',
+        DW_LANG.D:                 'D',
+        DW_LANG.Python:            'Python',
+        DW_LANG.Go:                'Go',
+        DW_LANG.C_plus_plus_11:    'C++11',
+        DW_LANG.C11:               'C11',
+        DW_LANG.C_plus_plus_14:    'C++14',
+        DW_LANG.Fortran03:         'F03',
+        DW_LANG.Fortran08:         'F08',
+        DW_LANG.Mips_Assembler:    'Assembler',
+        DW_LANG.Upc:               'UCP',
+    }
+    try:
+        return lang_str[lang_code]
+    except KeyError:
+        if (DW_LANG.lo_user <= lang_code and
+            lang_code <= DW_LANG.hi_user):
+            return 'Implementation defined language 0x%x' % (lang_code,)
+        else:
+            return 'Unknown language 0x%x' % (lang_code,)
+
+DW_AT_language = sys.intern('DW_AT_language')
+DW_AT_producer = sys.intern('DW_AT_producer')
+DW_AT_comp_dir = sys.intern('DW_AT_comp_dir')
+DW_AT_name = sys.intern('DW_AT_name')
+
+def producer_str_from_value(producer_bytes):
+    # string table stripped(?)
+    if isinstance(producer_bytes, int):
+        return '0x%x' % (producer_bytes,)
+    else:
+        return producer_bytes.decode('ascii')
+
+def path_from_comp_dir_and_name(comp_dir, name):
+    # Not using die.get_full_path() to support utf-8 filenames
+    # 
+    # assert(isinstance(comp_dir, bytes) and
+    #        isisntance(name, bytes))
+    return os.path.join(comp_dir, name).decode('utf-8')
+
+def text_report(lang_to_producer_to_cus):
+    for (l, ps) in lang_to_producer_to_cus.items():
+        if len(ps.keys()) == 1:
+            producer_bytes = next(iter(ps.values()))[0].attributes[DW_AT_producer].value
+            producer_str = producer_str_from_value(producer_bytes)
+            print('All %r files were compiled with %r' % (dwarf_lang_str(l), producer_str))
+            return
+
+        # att[DW_AT_producer].value can be int if pyelftools fails to find the referenced string table
+        # historically new debug info compression techniques (e.g. DW_FORM_strp_alt)
+        # could also trigger this
+        producer_strs = [ producer_str_from_value(cus[0].attributes[DW_AT_producer].value)
+                         for cus in ps.values() ]
+        producer_common_prefix = os.path.commonprefix(producer_strs)
+        common_prefix_len = len(producer_common_prefix)
+
+        print('%r compilation common prefix: %r' %
+              (dwarf_lang_str(l), producer_common_prefix))
+        for (p, cus) in ps.items():
+            producer_bytes = cus[0].attributes[DW_AT_producer].value
+            producer_str =  producer_str_from_value(producer_bytes)
+            print('%r files compiled with %r:' % (dwarf_lang_str(l), producer_str[common_prefix_len:]))
+            for die in cus:
+                comp_dir = die.attributes[DW_AT_comp_dir].value
+                # string table stripped
+                if isinstance(comp_dir, int):
+                    continue
+                name = die.attributes[DW_AT_name].value
+                if isinstance(name, int):
+                    continue
+                print('  ', end='')
+                print(path_from_comp_dir_and_name(comp_dir, name))
+
+def json_report(lang_to_producer_to_cus, fout):
+    # generating data structure suitable for json.dump
+    # by duplicating the whoel lang_to_producer_to_cus structure
+    out = collections.defaultdict(lambda: collections.defaultdict(lambda: []))
+    for (l, ps) in lang_to_producer_to_cus.items():
+        l_str = dwarf_lang_str(l)
+        lang_to_cu = out[l_str]
+        for (p, cus) in ps.items():
+            producer_bytes = cus[0].attributes[DW_AT_producer].value
+            producer_str = producer_str_from_value(producer_bytes)
+            cus_out = lang_to_cu[producer_str]
+            for die in cus:
+                comp_dir = die.attributes[DW_AT_comp_dir].value
+                # string table stripped
+                if isinstance(comp_dir, int):
+                    continue
+                name = die.attributes[DW_AT_name].value
+                if isinstance(name, int):
+                    continue
+                name = die.attributes[DW_AT_name].value
+                cus_out.append(path_from_comp_dir_and_name(comp_dir, name))
+    json.dump(out, fout)
+
+def print_usage_exit():
+    sys.stderr.write('usage: %s ELF_FILE\n' % (program_name(),))
+    sys.exit(2)
+
+def main(args):
+    p = argparse.ArgumentParser()
+    p.add_argument('--json-output', type=str)
+    p.add_argument('filename')
+
+    args = p.parse_args(args)
+    filename = args.filename
+
+    # lang_to_producer_to_cus: { lang_raw: { producer_raw: [die, ...] }}
+    lang_to_producer_to_cus = collections.defaultdict(lambda:
+                                                  collections.defaultdict(lambda: []))
+    for die in iter_compilation_units(filename):
+        att = die.attributes
+        try:
+            l = att[DW_AT_language].raw_value
+        except KeyError:
+            # ELF file likely using -gsplit-dwarf
+            continue
+        producer_raw_value = att[DW_AT_producer].raw_value
+        p = lang_to_producer_to_cus[l]
+        p[producer_raw_value].append(die)
+        if DEBUG:
+            print('CU: lang: 0x%x (%s), name: %s' % (l, dwarf_lang_str(l), att[DW_AT_name].value))
+
+    if args.json_output:
+        with open(args.json_output, 'w') as fout:
+            json_report(lang_to_producer_to_cus, fout)
+    else:
+        text_report(lang_to_producer_to_cus)
+
+
+if __name__ == '__main__':
+    if PROFILING:
+        import cProfile
+        cProfile.run('main(sys.argv[1:])')
+    else:
+        main(sys.argv[1:])
