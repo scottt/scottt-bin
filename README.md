@@ -15,6 +15,7 @@ C / C++
 * gdb-info-{functions,variables,types,line} -- show functions, variables etc through GDB
 * function-is-not-used
 * dwarf-analyze-gcc-switches -- analyze which files where compiled with what flags when `-grecord-gcc-switches` is used
+* elf-interp-dump -- show `.interp` section content of ELF files
 
 OSX / iOS
 ===

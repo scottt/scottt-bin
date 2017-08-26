@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+
+# $ elf-interp-dump ELF-FILE
+# Show the .interp string in ELF file if present
+#
+# $ elf-interp-dump /bin/true
+#   /lib64/ld-linux-x86-64.so.2
+#
+# Requires pyelftools ("pip3 install --user pyselftools")
+
+import elftools.elf.elffile
+from elftools.elf.segments import InterpSegment
+from elftools.common.exceptions import ELFError
+
+import sys
+import os
+
+def program_name():
+    return os.path.basename(sys.argv[0])
+
+def print_usage_exit():
+    sys.stderr.write('usage: %s ELF-FILE\n' % (program_name(),))
+    sys.exit(2)
+
+def main(args):
+    try:
+        (filename,) = args
+    except ValueError:
+        print_usage_exit()
+
+    try:
+        f = elftools.elf.elffile.ELFFile(open(filename, 'rb'))
+    except ELFError:
+        sys.stderr.write('"%s" is not an ELF file\n' % (filename,))
+        sys.exit(2)
+
+    for i in f.iter_segments():
+        if not isinstance(i, InterpSegment):
+            continue
+        print(i.get_interp_name())
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
