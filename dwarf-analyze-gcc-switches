@@ -2,6 +2,9 @@
 
 # $ dwarf-analyze-gcc-switches ELF_FILE
 # $ dwarf-analyze-gcc-switches --json-output OUT.json ELF_FILE
+#
+# Analyzes compiler swtiches in DW_AT_producer debug info records
+# for all compilation units.
 
 # Example:
 # $ dwarf-analyze-gcc-switches /usr/lib/debug/lib64/ld-linux-x86-64.so.2.debug 
@@ -27,15 +30,12 @@
 #   }
 #}
 
-
-# Requires pyelftools ("pip3 install --user pyselftools")
-# Analyzes compiler swtiches in DW_AT_producer debug infor records
-# for all compilation units.
-#
-# These are prodced by gcc when the'-grecord-gcc-switches' compiler option is used. See:
+# Relies on records in the debug info when gcc is called with '-grecord-gcc-switches'. See:
 #   [GCC](https://gcc.gnu.org/onlinedocs/gcc/Debugging-Options.html)
 #   [Clang](https://clang.llvm.org/docs/ClangCommandLineReference.html#debug-information-flags)
 #   [ICC](https://software.intel.com/en-us/node/682654?language=en)
+#
+# Requires pyelftools ("pip3 install --user pyselftools")
 
 # TODO
 # 1. Support [Alternate debug sections](http://www.dwarfstd.org/ShowIssue.php?issue=120604.1)
@@ -49,14 +49,14 @@ import collections
 import json
 
 import elftools.elf.elffile
+from elftools.common.exceptions import ELFError
 
 PROFILING = False
 DEBUG = False
 
-def do_iter_compilation_units(file_obj):
+def iter_compilation_units(elf_file):
     ' -> compilation_unit_debug_information_entries ...'
-    ef = elftools.elf.elffile.ELFFile(file_obj)
-    dwarf_info = ef.get_dwarf_info()
+    dwarf_info = elf_file.get_dwarf_info()
     if dwarf_info is None:
         return
 
@@ -67,10 +67,6 @@ def do_iter_compilation_units(file_obj):
         for die in cu.iter_DIEs():
             if die.tag is DW_TAG_compile_unit:
                 yield die
-
-def iter_compilation_units(filename):
-    with open(filename, 'rb') as f:
-        yield from do_iter_compilation_units(f)
 
 # die.attributes -> OrderedDict([
 #  ('DW_AT_producer',
@@ -269,10 +265,16 @@ def main(args):
     args = p.parse_args(args)
     filename = args.filename
 
+    try:
+        elf_file = elftools.elf.elffile.ELFFile(open(filename, 'rb'))
+    except ELFError:
+        sys.stderr.write('%r is not an ELF file\n' % (filename,))
+        sys.exit(2)
+
     # lang_to_producer_to_cus: { lang_raw: { producer_raw: [die, ...] }}
     lang_to_producer_to_cus = collections.defaultdict(lambda:
                                                   collections.defaultdict(lambda: []))
-    for die in iter_compilation_units(filename):
+    for die in iter_compilation_units(elf_file):
         att = die.attributes
         try:
             l = att[DW_AT_language].raw_value
