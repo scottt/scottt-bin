@@ -124,9 +124,12 @@ def gdb_batch(gdb_cmd, command_list):
                             tempfile.TemporaryFile(mode='w+'))
     r = subprocess.call([gdb_cmd, '--batch', '-x', gdb_input.name],
                         stdout=out_file, stderr=err_file)
+    err_file.seek(0)
+    if r != 0:
+        raise ValueError(err_file.read())
+
     # NOTE: gdb exits with 0 even on errors ...
     # Let's hope these GDB error message strings are stable ..
-    err_file.seek(0)
     err_lines = err_file.readlines()
     if err_lines:
         # err_lines[0] would be 't.gdb:2: Error in sourced command file:', skip it
@@ -268,9 +271,7 @@ def gdbdis(args):
     except ValueError as e:
         sys.stderr.write(e.message)
         sys.exit(3)
-    else:
-        sys.stdout.write(o)
-        sys.exit(0)
+    sys.stdout.write(o)
 
 @main_function
 def gdbx(args):
