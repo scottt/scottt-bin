@@ -137,9 +137,9 @@ def gdb_batch(gdb_cmd, command_list):
         out = []
         out.append('%s input:\n' % (gdb_cmd,))
         gdb_input.seek(0)
-        out.append(gdb_input.read())
+        out.extend(['  ' + x for x in gdb_input.readlines()])
         out.append('\n%s stderr:\n' % (gdb_cmd,))
-        out.extend(err_lines)
+        out.extend(['  ' + x for x in err_lines])
         raise ValueError(''.join(out))
     out_file.seek(0)
     return out_file.read()
