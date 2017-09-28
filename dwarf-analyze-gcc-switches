@@ -62,7 +62,10 @@ def iter_compilation_units(elf_file):
 
     DW_TAG_compile_unit = sys.intern('DW_TAG_compile_unit')
 
-    section_offset = dwarf_info.debug_info_sec.global_offset
+    try:
+        section_offset = dwarf_info.debug_info_sec.global_offset
+    except AttributeError:
+        raise ValueError
     for cu in dwarf_info.iter_CUs():
         for die in cu.iter_DIEs():
             if die.tag is DW_TAG_compile_unit:
@@ -232,8 +235,8 @@ def text_report(lang_to_producer_to_cus):
 
 def json_report(lang_to_producer_to_cus, fout):
     # generating data structure suitable for json.dump
-    # by duplicating the whoel lang_to_producer_to_cus structure
-    out = collections.defaultdict(lambda: collections.defaultdict(lambda: []))
+    # by duplicating the whole lang_to_producer_to_cus structure
+    out = collections.defaultdict(lambda: collections.defaultdict(list))
     for (l, ps) in lang_to_producer_to_cus.items():
         l_str = dwarf_lang_str(l)
         lang_to_cu = out[l_str]
@@ -257,23 +260,10 @@ def print_usage_exit():
     sys.stderr.write('usage: %s ELF_FILE\n' % (program_name(),))
     sys.exit(2)
 
-def main(args):
-    p = argparse.ArgumentParser()
-    p.add_argument('--json-output', type=str)
-    p.add_argument('filename')
-
-    args = p.parse_args(args)
-    filename = args.filename
-
-    try:
-        elf_file = elftools.elf.elffile.ELFFile(open(filename, 'rb'))
-    except ELFError:
-        sys.stderr.write('%r is not an ELF file\n' % (filename,))
-        sys.exit(2)
-
+def do_analyze(elf_file, args):
     # lang_to_producer_to_cus: { lang_raw: { producer_raw: [die, ...] }}
     lang_to_producer_to_cus = collections.defaultdict(lambda:
-                                                  collections.defaultdict(lambda: []))
+                                                  collections.defaultdict(list))
     for die in iter_compilation_units(elf_file):
         att = die.attributes
         try:
@@ -293,6 +283,24 @@ def main(args):
     else:
         text_report(lang_to_producer_to_cus)
 
+def main(args):
+    p = argparse.ArgumentParser()
+    p.add_argument('--json-output', type=str)
+    p.add_argument('filename')
+
+    args = p.parse_args(args)
+    filename = args.filename
+
+    try:
+        elf_file = elftools.elf.elffile.ELFFile(open(filename, 'rb'))
+    except ELFError:
+        sys.stderr.write('%r is not an ELF file\n' % (filename,))
+        sys.exit(2)
+
+    try:
+        do_analyze(elf_file, args)
+    except ValueError:
+        sys.stderr.write('File %r contains no .debug_info section. Recompile with at least `-g1`.\n' % (filename,))
 
 if __name__ == '__main__':
     if PROFILING:
