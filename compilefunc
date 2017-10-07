@@ -130,7 +130,10 @@ def gdb_batch(gdb_cmd, command_list):
 
     # NOTE: gdb exits with 0 even on errors ...
     # Let's hope these GDB error message strings are stable ..
-    err_lines = err_file.readlines()
+    
+    # Ignore the following:
+    # 'warning: the debug information found in "/usr/lib/debug//usr/bin/true.debug" does not match "/usr/bin/true" (CRC mismatch).\n',
+    err_lines = [ x for x in err_file.readlines() if x.strip() and not x.startswith('warning: ') ]
     if err_lines:
         # err_lines[0] would be 't.gdb:2: Error in sourced command file:', skip it
         err_lines = err_lines[1:]
