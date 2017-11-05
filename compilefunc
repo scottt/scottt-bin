@@ -152,6 +152,8 @@ def gdb_batch_disassemble(gdb_cmd, exe, functions, options):
     if options.raw_instructions:
         dis_options += 'r'
     if options.source:
+        dis_options += 's'
+    elif options.source_centric:
         dis_options += 'm'
     # prefix with '/'
     if dis_options:
@@ -255,6 +257,7 @@ def gdbdis(args):
     ap.add_argument('functions', metavar='FUNCTION', nargs='+', help='function name or address to disassemble')
     ap.add_argument('-r', '--raw-instructions', action='store_true', help='show raw instruction opcodes')
     ap.add_argument('-s', '--source', action='store_true', help='include source lines'),
+    ap.add_argument('-m', '--source-centric', action='store_true', help='include `disassemble /m` source lines'),
     ap.add_argument('--no-header', action='store_true', 
                     help="don't show \"Dump of ...\" headers and footers even when disassembling multiple functions")
     # --no-special-symbol-quoting: created so that by default,
