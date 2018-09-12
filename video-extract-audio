@@ -29,14 +29,15 @@ def video_extract_audio(filename, options):
         '.webm': '.audio-only.webm',
     }
 
-    if options.out_filename is not None: 
-        out_filename = options.out_filename
-    else:
+    if options.out_filename is None: 
         (basename, ext) = os.path.splitext(filename)
+        basename = os.path.basename(basename)
         new_ext = container_ext_to_audio_only_ext.get(ext)
         if new_ext is None:
             raise ValueError('Unknown file format \"%s\"' % (filename,))
         out_filename = basename + new_ext
+    else:
+        out_filename = options.out_filename
 
     # avoid overwriting input file
     assert(out_filename != filename)
