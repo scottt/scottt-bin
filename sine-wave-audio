@@ -2,11 +2,13 @@
 
 # Play a sine wave test audio clip so you can test your audio settings
 # $ sine-wave-audio
-
+#
 # Save a sine wave test audio clip to a WAV or RAW file
 # $ sine-wave-save FILENAME.wav | FILENAME.raw
-
-# See Also: gstreamer pipelines in http://www.xinity-consulting.com/archives/54
+#
+# See Also:
+# https://gstreamer.freedesktop.org/data/doc/gstreamer/head/gst-plugins-base-plugins/html/gst-plugins-base-plugins-audiotestsrc.html
+# gstreamer pipelines in http://www.xinity-consulting.com/archives/54
 
 import sys
 import os
@@ -46,20 +48,31 @@ def common_option_list():
  OUTPUT_WAV
 ) = range(3)
 
-def gen_audio(options, output_path):
+def do_gen_audio(options, output_path, gst_launch_cmd=None):
     if options.is_signed:
         is_signed = 'true'
     else:
         is_signed = 'false'
     (freq, rate, channels, width) = (options.freq, options.rate, options.channels, options.width)
 
-    cmd = ['gst-launch']
+    if gst_launch_cmd is None:
+        cmd = ['gst-launch-1.0']
+    else:
+        cmd = [gst_launch_cmd]
     if options.verbose:
         cmd.extend(['-v', '-m'])
-    cmd.extend(['audiotestsrc', 'freq=%(freq)f' % dict(freq=freq), '!',
-           'audioconvert', '!',
-           'audio/x-raw-int,signed=(boolean)%(is_signed)s,rate=(int)%(rate)d,channels=(int)%(channels)d,width=(int)%(width)d' %
-                dict(is_signed=is_signed, rate=rate, channels=channels, width=width) ])
+
+    # FIXME:
+    # gst-launch-1.0 audiotestsrc freq=1000 ! audioconvert ! autoaudiosink
+
+    d = dict(freq=freq, is_signed=is_signed, rate=rate, channels=channels, width=width)
+    if cmd[0] == 'gst-launch-1.0':
+        cmd.extend(['audiotestsrc', 'freq=%(freq)f' % d, '!',
+                    'audioconvert'])
+    else:
+        cmd.extend(['audiotestsrc', 'freq=%(freq)f' % d, '!',
+                    'audioconvert', '!',
+                    'audio/x-raw-int,signed=(boolean)%(is_signed)s,rate=(int)%(rate)d,channels=(int)%(channels)d,width=(int)%(width)d' % d])
 
     if output_path == OUTPUT_AUDIO_HW:
         cmd.extend(['!', 'autoaudiosink'])
@@ -70,8 +83,16 @@ def gen_audio(options, output_path):
     else:
         assert(0)
 
+    subprocess.check_call(cmd)
+
+def gen_audio(options, output_path):
     try:
-        subprocess.check_call(cmd)
+        do_gen_audio(options, output_path)
+    except OSError as e:
+        if e.errno != errno.ENOENT:
+            raise
+        # Try both gst-launch-VER and gst-launch
+        do_gen_audio(options, output_path, gst_launch_cmd='gst-launch')
     except KeyboardInterrupt:
         sys.exit(0)
 
