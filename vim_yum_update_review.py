@@ -18,13 +18,13 @@ def version_start_index(s):
 #    Mar 23 05:37:10 Updated: system-config-printer-0.7.82.1-3.fc9.x86_64
 # 2. /var/log/dnf.rpm.log
 #   Mar 13 18:00:25 INFO Installed: systemd-python3-208-15.fc20.x86_64
-# 3. /varlog/dnf.rpm.log
+# 3. /var/log/dnf.rpm.log
 #   2017-07-21T02:31:43Z INFO Upgraded: mesa-libOSMesa-17.1.5-1.fc26.i686
-
+# 4. /var/log/dnf.rpm.log
+#   2018-12-23T15:46:33Z SUBDEBUG Upgraded: qemu-guest-agent-2:3.0.0-2.fc29.x86_64
 def package_version_arch_from_line(line):
     f = line.split()
-
-    if f[1] == 'INFO': # format 3
+    if f[1] == 'INFO' or f[1] == 'SUBDEBUG': # format 3 or 4
         package_field_index = 3
     elif f[3] == 'INFO':
         package_field_index = 5 # format 2
@@ -118,8 +118,15 @@ def make_view(lines_func):
         view_func_output(lambda: lines_func(p, v, a))
     return f
 
-#FIXME: automatically create view
-changelog_view = make_view(rpm_changelog)
+def changelog_view():
+    # Handle 'Upgraded: OLD-PACKGE-VERSION-ARCH' log format by not passing 'VERSION'
+    # to rpm query. e.g.
+    # "2018-12-23T15:46:33Z SUBDEBUG Upgraded: gnome-contacts-3.30.1-1.fc29.x86_64"
+    (package, version, arch) = package_version_arch_from_line(vim.current.line)
+    view_func_output(lambda: rpm_changelog(package=package, version=None, arch=arch))
+
+#FIXME: automatically create views
+changelog_view = changelog_view
 info_view = make_view(rpm_info)
 list_view = make_view(rpm_list)
 docfiles_view = make_view(rpm_docfiles)
