@@ -15,11 +15,11 @@ def main(args):
     p = program_name()
     if p == 'lsof-listening':
         op = optparse.OptionParser(option_list = [
-            optparse.Option('-6', '--ipv6', action='store_true')
+            optparse.Option('-4', '--ipv4-only', action='store_true')
         ])
         (options, args) = op.parse_args(args)
         cmd = 'sudo lsof -i -nP | grep LISTEN'
-        if not options.ipv6:
+        if options.ipv4_only:
             cmd += '| grep -v IPv6'
         subprocess.check_call(cmd, shell=1)
     elif p == 'lsof-udp':
