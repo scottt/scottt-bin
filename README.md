@@ -7,9 +7,9 @@ C / C++
 * cc-defines -- dump gcc's builtin macro definitions
 * cc-linker-script -- dump gcc's default linker script
 * cc-config -- dump gcc's build configuration. Useful when examining vendor cross compiler toolchains.
-* cc-compile -- compile progam from STDIN and print assembly to STDOUT
+* cc-compile -- compile program from STDIN and print assembly to STDOUT
 * compilefunc -- generate assembler output on STDOUT for specified functions
-* gdbdis -- disassmble a function or memory range through GDB
+* gdbdis -- disassemble a function or memory range through GDB
 * gdbx -- examine memory through GDB
 * gdb-info-scope -- Use gdb to list the variables local to a scope.  Shows DWARF debug info.
 * gdb-info-{functions,variables,types,line} -- show functions, variables etc through GDB
@@ -40,7 +40,7 @@ Python
 
 Django
 ===
-* django-secret-key-gen -- generate random SECRET_KEY for settings.py
+* django-secret-key-gen -- generate random `SECRET_KEY` for `settings.py`
 
 Command Line / Shell Scripting
 ===
@@ -51,19 +51,19 @@ Command Line / Shell Scripting
 * clipboard-copy -- copy file content to X11 clipboard
 * clipboard-open-file-line -- open $EDITOR to filename:line in X11 clipboard
 * argv-print -- debug command line argument passing in scripts
-* realpath -- like realpath(3), recent GNU coreutils now ships a realpath binary
-* crypt -- compute salted hash with crypt(3)
-* md5crypt -- compute MD5 salted hash with crypt(3) (glibc extension)
-* sha256crypt -- compute SHA256 salted hash with crypt(3) (glibc extension)
-* sha512crypt -- compute SHA512 salted hash with crypt(3) (glibc extension)
+* realpath -- like `realpath(3)`, recent GNU coreutils now ships a realpath binary
+* crypt -- compute salted hash with `crypt(3)`
+* md5crypt -- compute MD5 salted hash with `crypt(3)` (glibc extension)
+* sha256crypt -- compute SHA256 salted hash with `crypt(3)` (glibc extension)
+* sha512crypt -- compute SHA512 salted hash with `crypt(3)` (glibc extension)
 * lc -- line count
-* range -- "range 1 10" prints 1 to 9 (similar to seq(1))
+* range -- `range 1 10` prints 1 to 9 (similar to `seq(1)`)
 * dict-grep -- grep word in dictionary file
 * random-file -- choose N random files in CWD
 * size-sum -- add up the size of the files named in STDIN
 * zip-dir -- zip up a directory
-* slice -- print a subset of lines from STDIN like head(1) or tail(1)
-* vim-pager -- use vim as a pager like more(1)
+* slice -- print a subset of lines from STDIN like `head(1)` or `tail(1)`
+* vim-pager -- use vim as a pager like `more(1)`
 * xdg-rename-by-content -- change file extension to match file type detected from content
 * terminal-colors-list -- list colors supported by terminal
 * prompt-str-gen -- generate a str with terminal underline and color control codes
@@ -80,9 +80,10 @@ System Administration
 * iptables-list-INPUT -- list firewall input rules
 * iptables-save -- save iptables rules across reboots
 * ntp-sync -- sync system time through NTP
-* disk-{scan,deactivate} -- useful for eSATA hotplug. Nicer than scsi-rescan in sg3_utils.
+* disk-{scan,deactivate} -- useful for eSATA hotplug. Nicer than scsi-rescan in `sg3_utils`.
 * git-repo-add-email-notifications -- configures email notification in git repositories.
 * vm-start -- manage virtual machines through "virsh" / libvirt
+* mdns-discover -- use `avahi-browse` to discover network services
 
 Text Encoding Conversion
 ===

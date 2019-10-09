@@ -1,0 +1,2 @@
+#!/bin/sh
+avahi-browse --all --resolve --terminate
