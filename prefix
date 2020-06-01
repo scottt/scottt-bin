@@ -1,0 +1,8 @@
+#!/bin/sh
+
+case $# in
+1) N=$1 ;;
+*) printf 'usage: prefix N_CHARACTERS\n'>&2; exit 2;;
+esac
+
+cut -c 1-"$N"

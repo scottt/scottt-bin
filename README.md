@@ -67,6 +67,8 @@ Command Line / Shell Scripting
 * xdg-rename-by-content -- change file extension to match file type detected from content
 * terminal-colors-list -- list colors supported by terminal
 * prompt-str-gen -- generate a str with terminal underline and color control codes
+* treels -- flat, `ls -l` like output with `tree`
+* prefix -- print first N characters from STDIN
 
 System Administration
 ===
