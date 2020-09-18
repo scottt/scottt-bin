@@ -4,6 +4,7 @@ import sys
 import os
 import subprocess
 import optparse
+import tempfile
 
 try:
     import pygtk
@@ -13,24 +14,57 @@ except ImportError:
         #    raise
     pygtklibdir = os.path.join('usr', 'lib64', 'pygtk', '2.0')
     sys.path.insert(0, pygtklibdir)
-    print('pre 2nd import')
-    import pygtk
-pygtk.require('2.0')
-import gtk
+    #print('pre 2nd import')
+    try:
+        import pygtk
+    except ImportError:
+        pygtk = None
+        gtk = None
+
+if pygtk is not None:
+    pygtk.require('2.0')
+if gtk is not None:
+    import gtk
 
 def program_name():
     return os.path.basename(sys.argv[0])
 
-def clipboard_get_text(selection):
+def mac_clipboard_get_text():
+    with tempfile.TemporaryFile(mode='w+') as tf:
+        subprocess.check_call(['pbpaste'], stdout=tf)
+        tf.seek(0)
+        return tf.read()
+
+def mac_clipboard_set_text(text):
+    p = subprocess.Popen(['pbcopy'], stdin=subprocess.PIPE)
+    p.stdin.write(text)
+    p.stdin.close()
+    r = p.wait()
+    if r != 0:
+        raise RuntimeError('pbcopy returned ' + str(r))
+
+def gtk_clipboard_get_text(selection):
     'return textual data from the X11 clipboard. @selection should be "PRIMARY" or "CLIPBOARD"'
     clipboard = gtk.Clipboard(selection=selection)
     return clipboard.wait_for_text()
 
-def clipboard_set_text(text, selection):
+def gtk_clipboard_set_text(text, selection):
     clipboard = gtk.Clipboard(selection=selection)
     clipboard.set_text(text)
     # make the data stick around after this process exits
     clipboard.store()
+
+def clipboard_get_text(selection):
+    if gtk is None:
+        return mac_clipboard_get_text()
+    else:
+        return gtk_clipboard_get_text(selection)
+
+def clipboard_set_text(text, selection):
+    if gtk is None:
+        return mac_clipboard_set_text(text)
+    else:
+        return gtk_clipboard_set_text(text, selection)
 
 main_function_list = []
 
