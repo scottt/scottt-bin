@@ -31,6 +31,7 @@ Software Development
 * lsof-udp -- list programs bound to UDP ports
 * http-static-server -- HTTP server that serves static content in CWD
 * git-clean -- delete files not tracked by git
+* git-config-credential-libsecret -- use libsecret as the Git credentil helper
 
 Python
 ===
@@ -86,6 +87,14 @@ System Administration
 * git-repo-add-email-notifications -- configures email notification in git repositories.
 * vm-start -- manage virtual machines through "virsh" / libvirt
 * mdns-discover -- use `avahi-browse` to discover network services
+
+Certificates
+===
+* {ca-,}cert-gen -- generate x509 certificate with openssl
+* ca-cert-install-on-{fedora,mac} -- install and trust self-signed certificate
+* openssl-inspect-{csr,pem} -- inspect Certificate Signing Request and PEM files
+* openssl-test-connect -- debug TLS handshake connect
+* mac-list-keychains -- list keychains on Mac OS
 
 Text Encoding Conversion
 ===

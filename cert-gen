@@ -1,0 +1,230 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+import subprocess
+import argparse
+import shutil
+
+# https://stackoverflow.com/questions/58500892/install-self-signed-certificates-no-longer-working-in-android-q
+
+s = dict(
+    cert_common_name='*.my.fake',
+    cert_organization='My Fake Corp Ltd.',
+    ca_cert_filename='self-ca',
+    site_cert_filename='my.fake',
+)
+
+openssl_conf_template = '''[req]
+default_bits = 2048
+encrypt_key  = no # Change to encrypt the private key using des3 or similar
+default_md   = sha256
+prompt       = no
+utf8         = yes
+
+# Specify the DN here so we aren't prompted (along with prompt = no above).
+
+distinguished_name = req_distinguished_name
+
+# Extensions for SAN IP and SAN DNS
+
+req_extensions = v3_req
+
+# Be sure to update the subject to match your organization.
+
+[req_distinguished_name]
+C  = TW
+ST = Taiwan
+L  = Taipei
+O  = %(cert_organization)s
+OU = Engineering
+CN = %(cert_common_name)s
+
+# Allow client and server auth. You may want to only allow server auth.
+# Link to SAN names.
+
+[v3_req]
+subjectKeyIdentifier = hash
+keyUsage             = digitalSignature, keyEncipherment
+extendedKeyUsage     = clientAuth, serverAuth
+subjectAltName       = @alt_names
+
+# Alternative names are specified as IP.# and DNS.# for IP addresses and
+# DNS accordingly.
+
+[alt_names]
+DNS.1 = %(cert_common_name)s
+'''
+#basicConstraints     = CA:FALSE
+
+def run(cmd, *args):
+    sys.stderr.write('run(%r)\n' % (cmd,))
+    return subprocess.check_call(cmd, *args)
+
+main_function_map = {}
+
+def main_function(func):
+    global main_function_map
+    main_function_map[func.__name__.replace('_','-')] = func
+    return func
+
+@main_function
+def ca_cert_gen(args):
+    parser = argparse.ArgumentParser(description='generate self signed CA certificate for Android and iOS development')
+    parser.add_argument('--ca-cert', help='output filename of the CA certificate')
+    options = parser.parse_args(args)
+
+    if options.ca_cert is not None:
+        s['ca_cert_filename'] = options.ca_cert
+
+    cmd = ['openssl', 'req',
+      '-new', '-newkey', 'rsa:2048',
+      '-days', '3650',
+      '-nodes', '-x509',
+      '-subj', '/C=TW/ST=Taiwan/L=Taipei/O=%(cert_organization)s/OU=Engineering/CN=%(cert_common_name)s' % s,
+      '-keyout', '%(ca_cert_filename)s.key' % s,
+      '-out', '%(ca_cert_filename)s.crt' % s]
+    run(cmd)
+
+@main_function
+def site_cert_gen(args):
+    parser = argparse.ArgumentParser(description='generate self signed server certificates for Android and iOS development')
+    parser.add_argument('--site-common-name', help='Common Name (CN) field in the site certificate')
+    parser.add_argument('--site-cert', help='output filename of the site certificate')
+    parser.add_argument('--ca-cert', help='input filename of the CA certificate')
+    options = parser.parse_args(args)
+
+    if options.site_common_name is not None:
+        s['cert_common_name'] = options.site_common_name
+    if options.site_cert is not None:
+        s['site_cert_filename'] = options.site_cert
+    if options.ca_cert is not None:
+        s['ca_cert_filename'] = options.ca_cert
+
+    ca_cert_filename = '%(ca_cert_filename)s.crt' % s
+    if not os.path.exists(ca_cert_filename):
+        sys.stderr.write('Run "./ca-cert-gen" first to generate %r\n' % (ca_cert_filename,))
+        sys.exit(1)
+
+    with open('openssl.cnf', 'w') as f:
+        f.write(openssl_conf_template % s)
+
+    cmd = ['openssl', 'genrsa', '-out', '%(site_cert_filename)s.key' % s, '2048']
+    run(cmd)
+
+    cmd = ['openssl', 'req',
+      '-new', '-key', '%(site_cert_filename)s.key' % s,
+      '-out', '%(site_cert_filename)s.csr' % s,
+      '-config', 'openssl.cnf']
+    run(cmd)
+
+    cmd = ['openssl', 'x509',
+      '-req',
+      '-days', '3650',
+      '-in', '%(site_cert_filename)s.csr' % s,
+      '-CA', '%(ca_cert_filename)s.crt' % s,
+      '-CAkey', '%(ca_cert_filename)s.key' % s,
+      '-CAcreateserial',
+      '-extensions', 'v3_req',
+      '-extfile', 'openssl.cnf',
+      '-out', '%(site_cert_filename)s.crt' % s]
+    run(cmd)
+
+    cmd = ['openssl', 'x509',
+      '-inform', 'PEM',
+      '-outform', 'DER',
+      '-in', '%(site_cert_filename)s.crt' % s,
+      '-out', '%(site_cert_filename)s.der.crt' % s]
+    run(cmd)
+
+@main_function
+def adb_copy_cert_to_sdcard_download_folder(args):
+    parser = argparse.ArgumentParser(description='install self signed certificates for Android development through adb')
+    parser.add_argument('--site-cert', help='filename of the site certificate')
+    options = parser.parse_args(args)
+    if options.site_cert is not None:
+        s['site_cert_filename'] = options.site_cert
+    cert_filename = '%(site_cert_filename)s.crt' % s
+    cmd = ['adb', 'push', cert_filename, '/mnt/sdcard/Download']
+    run(cmd)
+    print('\nOn your Android device:\n1. start the "Files" app\n2. open "sdcard/Download/%s' % (cert_filename,))
+
+def copy_file_with_permission_msg(src, dst):
+    try:
+        shutil.copy(src, dst)
+    except PermissionError as e:
+        sys.stderr.write('%s\n' % (e,))
+        sys.stderr.write('Run %r as root\n' % (program_name(),))
+        sys.exit(1)
+
+@main_function
+def ca_cert_install_on_fedora(args):
+    parser = argparse.ArgumentParser(description='trust self generated CA certificates on e.g. Fedora Linux')
+    parser.add_argument('ca_cert', help='filename of the CA certificate')
+    options = parser.parse_args(args)
+
+    copy_file_with_permission_msg(options.ca_cert, '/etc/pki/ca-trust/source/anchors/')
+    run(['update-ca-trust'])
+
+@main_function
+def ca_cert_install_on_mac_for_everyone(args):
+    parser = argparse.ArgumentParser(description='trust self generated CA certificates on Mac OS using system keychain and admin cert store')
+    parser.add_argument('ca_cert', help='filename of the CA certificate')
+    options = parser.parse_args(args)
+    # https://apple.stackexchange.com/questions/80623/import-certificates-into-the-system-keychain-via-the-command-line
+    # search for 'add-trusted-cert' in https://www.unix.com/man-page/mojave/1/security/
+    run(['security', 'add-trusted-cert', '-d', '-r', 'trustRoot', '-k', '/Library/Keychains/System.keychain', options.ca_cert])
+
+@main_function
+def ca_cert_install_on_mac(args):
+    parser = argparse.ArgumentParser(description='trust self generated CA certificates on Mac OS')
+    parser.add_argument('ca_cert', help='filename of the CA certificate')
+    options = parser.parse_args(args)
+    run(['security', 'add-trusted-cert', '-r', 'trustRoot', '-k', os.path.expanduser('~/Library/Keychains/login.keychain'), options.ca_cert])
+
+@main_function
+def mac_list_keychains(args):
+    run['security', 'list-keychains'])
+
+def inspect_pem(args):
+    if not args:
+        sys.stderr.write('usage: %s PEM...')
+        sys.exit(2)
+    for i in args:
+        run(['openssl', 'x509', '-in', i, '-text', '-noout'])
+
+@main_function
+def openssl_inspect_cert(args):
+    inspect_pem(args)
+
+@main_function
+def openssl_inspect_pem(args):
+    inspect_pem(args)
+
+@main_function
+def openssl_inspect_csr(args):
+    for i in args:
+        run(['openssl', 'req', '-in', i, '-text', '-noout'])
+
+@main_function
+def openssl_test_connect(args):
+    try:
+        (host_port,) = args
+    except ValueError:
+        sys.stderr.write('usage: %s HOST:PORT (e.g. "api.my.fake:443")\n' % (program_name(),))
+        sys.exit(2)
+    run(['openssl', 's_client', host_port])
+
+def main_function_dispatch(name, args):
+    try:
+        f = main_function_map[name]
+    except KeyError:
+        sys.stderr.write('%s is not a valid command name\n' % (name,))
+        sys.exit(2)
+    f(args)
+
+def program_name():
+    return os.path.basename(sys.argv[0])
+
+if __name__ == '__main__':
+    main_function_dispatch(program_name(), sys.argv[1:])
