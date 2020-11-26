@@ -92,7 +92,7 @@ def gen_audio(options, output_path):
         if e.errno != errno.ENOENT:
             raise
         # Try both gst-launch-VER and gst-launch
-        do_gen_audio(options, output_path, gst_launch_cmd='gst-launch')
+        do_gen_audio(options, output_path, gst_launch_cmd='gst-launch-1.0')
     except KeyboardInterrupt:
         sys.exit(0)
 
