@@ -148,6 +148,7 @@ Miscellaneous
 
 * imgs-to-pdf -- convert bitmap images to a multipage PDF
 * pdf-pages -- merge multiple pages from a source PDF into one
+* pdf-remove-password -- remove password from PDF (with qpdf)
 * gnome-recently-used-clear -- clear the recently used files list in GNOME
 * alarm -- play an alarm sound
 * xnest -- start a nested Xnest server through startx
