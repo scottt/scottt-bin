@@ -1,7 +1,24 @@
-#!/bin/sh
+#!/usr/bin/env python3
 
-if [ "$#" != "0" ]; then
-	vim -R $@ -c 'nm q :qa!<CR>'
-else
-	vim -R - -c 'nm q :qa!<CR>'
-fi
+import subprocess
+import os
+import sys
+
+path_of_this_file = os.path.realpath(__file__)
+bin_dir = os.path.dirname(path_of_this_file)
+vimpager_in_same_dir = os.path.join(bin_dir, 'vimpager')
+
+if os.path.exists(vimpager_in_same_dir):
+    sys.exit(subprocess.call(vimpager_in_same_dir))
+
+args = sys.argv[1:]
+if len(args) == 0:
+    i = [ '-' ]
+else:
+    i = args
+
+cmd = ['vim', '-R' ] + i + ['-c', 'nm q :qa!<CR>']
+if os.path.exists(os.path.join(os.path.expanduser('~'), '.vim', 'pack', 'my-plugins', 'start', 'vimpager')):
+    cmd.extend(['-c', 'AnsiEsc', '-c', 'syntax on'])
+
+sys.exit(subprocess.call(cmd))
