@@ -15,7 +15,7 @@ def main(args):
     p = program_name()
     if p == 'lsof-listening':
         op = optparse.OptionParser(option_list = [
-            optparse.Option('-4', '--ipv4-only', action='store_true')
+            optparse.Option('-4', '--ipv4-only', action='store_false')
         ])
         (options, args) = op.parse_args(args)
         cmd = 'sudo lsof -i -nP | grep LISTEN'
