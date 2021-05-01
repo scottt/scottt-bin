@@ -25,4 +25,4 @@ elif len(args) == 1:
 else:
     print_usage_exit()
 
-subprocess.check_call(['sudo', 'ntpdate', '-dv', ntp_server])
+subprocess.check_call(['sudo', 'ntpdate', '-v', ntp_server])
