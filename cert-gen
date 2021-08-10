@@ -184,14 +184,22 @@ def ca_cert_install_on_mac(args):
 
 @main_function
 def mac_list_keychains(args):
-    run['security', 'list-keychains'])
+    run(['security', 'list-keychains'])
 
-def inspect_pem(args):
+def openssl_inspect(pem_content, args):
     if not args:
-        sys.stderr.write('usage: %s PEM...')
+        sys.stderr.write('usage: %s PEM...\n' % (program_name(),))
         sys.exit(2)
     for i in args:
-        run(['openssl', 'x509', '-in', i, '-text', '-noout'])
+        run(['openssl', pem_content, '-in', i, '-text', '-noout'])
+
+def inspect_pem(args):
+    # try 'x509', 'rsa'
+    try: 
+        openssl_inspect('x509', args)
+    except subprocess.SubprocessError:
+        pass
+    openssl_inspect('rsa', args)
 
 @main_function
 def openssl_inspect_cert(args):
