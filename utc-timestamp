@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+
+import datetime
+import argparse
+import sys
+
+args = sys.argv[1:]
+parser = argparse.ArgumentParser()
+parser.add_argument('-s', '--seconds', action='store_true', help='limit timestamp precision to seconds')
+options = parser.parse_args(args)
+
+dt = datetime.datetime.now(datetime.timezone.utc)
+utc_time = dt.replace(tzinfo=datetime.timezone.utc)
+utc_timestamp = utc_time.timestamp()
+if options.seconds:
+    utc_timestamp = int(utc_timestamp)
+print(utc_timestamp)
