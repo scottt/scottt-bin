@@ -1,0 +1,5 @@
+#!/bin/sh
+
+VIRT_NETWORK=default
+
+sudo sh -c "virsh net-destroy $VIRT_NETWORK && virsh net-start $VIRT_NETWORK"
