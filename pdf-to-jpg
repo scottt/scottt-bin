@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# https://stackoverflow.com/a/6605085/676030
+convert           \
+   -verbose       \
+   -density 150   \
+   -trim          \
+   $1 \
+   -quality 100   \
+   -flatten       \
+   -sharpen 0x1.0 \
+   $2
