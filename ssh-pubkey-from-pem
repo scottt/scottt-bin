@@ -1,0 +1,11 @@
+#!/bin/sh
+# SYNOPSIS: ssh-pubkey-from-pem PEM_FROM_AWS SSH_PUBKEY_OUTFILE
+
+set -o nounset
+
+case $# in
+2) IN_FILE=$1; OUT_FILE=$2 ;;
+*) printf 'usage: %s PEM_FILE SSH_PUBKEY_OUTFILE\n' "$(basename $0)" >&2 ; exit 2 ;;
+esac
+
+ssh-keygen -y -f $IN_FILE > $OUT_FILE
