@@ -71,9 +71,11 @@ Command Line / Shell Scripting
 * treels -- flat, `ls -l` like output with `tree`
 * prefix -- print first N characters from STDIN
 
-System Administration
+System Administration / DevOps
 ===
 
+* utc-timestamp -- Unix timestamp (seconds since Jan 1, 1970) for current time in UTC
+* ssh-pubkey-from-pem -- convert SSH public key from PEM to .ssh format
 * remote-domain-socket-proxy -- connect to a remote Unix domain socket through a local one.
   e.g. MySQL remote administration.
 * iptables-allow-{daap,http,mdns,nfsv4,samba,ssh,soundwire,steam} -- open port(s) with iptables
@@ -87,6 +89,7 @@ System Administration
 * git-repo-add-email-notifications -- configures email notification in git repositories.
 * vm-start -- manage virtual machines through "virsh" / libvirt
 * mdns-discover -- use `avahi-browse` to discover network services
+* expressvpn-virtmanager-workaround -- restart virtmanager networks after ExpressVPN disconnect
 
 Certificates
 ===
@@ -142,13 +145,16 @@ Audio / Video Encoding and Conversion
 * ffmpeg-webm-360p -- convert video to the WebM format through ffmpeg
 * flv-to-mp3 -- covnert audio tracks in FLV to an MP3
 * pulseaudio-rtp-serve -- broadcast audio from Linux through RTP in PCM or MP3 format
+* pulseaudio-simple-serve -- listen for connections and serve PCM audio
 
 Miscellaneous
 ===
 
 * imgs-to-pdf -- convert bitmap images to a multipage PDF
+* pdf-to-jpg -- convert PDF to JPEG
+* vector-to-png -- convert SVG to PNG
 * pdf-pages -- merge multiple pages from a source PDF into one
-* pdf-remove-password -- remove password from PDF (with qpdf)
+* pdf-{add,remove}-password -- remove password from PDF (with qpdf)
 * gnome-recently-used-clear -- clear the recently used files list in GNOME
 * alarm -- play an alarm sound
 * xnest -- start a nested Xnest server through startx
