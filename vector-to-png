@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# https://stackoverflow.com/a/27919097
+# https://stackoverflow.com/a/41765833
+
+program-name() {
+	basename $0
+}
+
+case $# in
+2) IN_FILE=$1; OUT_FILE=$2 ;;
+*) printf 'usage: %s VECTOR_FILE OUT_FILE\n'>&2 "$(program-name)" ; exit 2 ;;
+esac
+convert -size 200x200 -background none -density 256x256 "$1" "$2"
