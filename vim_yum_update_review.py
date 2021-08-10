@@ -22,6 +22,8 @@ def version_start_index(s):
 #   2017-07-21T02:31:43Z INFO Upgraded: mesa-libOSMesa-17.1.5-1.fc26.i686
 # 4. /var/log/dnf.rpm.log
 #   2018-12-23T15:46:33Z SUBDEBUG Upgraded: qemu-guest-agent-2:3.0.0-2.fc29.x86_64
+#   2021-04-29T12:12:31+0800 SUBDEBUG Upgrade: firefox-88.0-5.fc34.x86_64
+
 def package_version_arch_from_line(line):
     f = line.split()
     if f[1] == 'INFO' or f[1] == 'SUBDEBUG': # format 3 or 4
@@ -59,7 +61,7 @@ def package_version_arch_from_line(line):
 def rpm_query(option_list):
     'rpm_query([...]) -> [ LINES_OF_RPM_OUTPUT, ... ]'
     p = subprocess.Popen(['rpm', '-q'] + option_list, stdout=subprocess.PIPE)
-    return ( x.rstrip() for x in p.stdout )
+    return ( x.rstrip().decode('utf-8') for x in p.stdout )
 
 def rpm_package_name(package, version=None, arch=None):
     o = [ package ]
@@ -113,20 +115,17 @@ def view_func_output(func):
 
 def make_view(lines_func):
     #FIXME: must get the current line info before anyone moves the cursor
-    def f():
-        (p, v, a) = package_version_arch_from_line(vim.current.line)
-        view_func_output(lambda: lines_func(p, v, a))
-    return f
-
-def changelog_view():
+    #
     # Handle 'Upgraded: OLD-PACKGE-VERSION-ARCH' log format by not passing 'VERSION'
     # to rpm query. e.g.
     # "2018-12-23T15:46:33Z SUBDEBUG Upgraded: gnome-contacts-3.30.1-1.fc29.x86_64"
-    (package, version, arch) = package_version_arch_from_line(vim.current.line)
-    view_func_output(lambda: rpm_changelog(package=package, version=None, arch=arch))
+    def f():
+        (package, version, arch) = package_version_arch_from_line(vim.current.line)
+        view_func_output(lambda: lines_func(package=package, version=None, arch=arch))
+    return f
 
 #FIXME: automatically create views
-changelog_view = changelog_view
+changelog_view = make_view(rpm_changelog)
 info_view = make_view(rpm_info)
 list_view = make_view(rpm_list)
 docfiles_view = make_view(rpm_docfiles)
