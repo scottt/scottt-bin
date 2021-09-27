@@ -1,0 +1,6 @@
+#!/bin/sh
+
+#    openssl rand [-base64] [-hex] [-out file] num
+#    he rand command outputs num pseudo-random bytes.
+N_BYTES=32
+openssl rand -base64 $N_BYTES

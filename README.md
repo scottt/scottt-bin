@@ -61,6 +61,7 @@ Command Line / Shell Scripting
 * range -- `range 1 10` prints 1 to 9 (similar to `seq(1)`)
 * dict-grep -- grep word in dictionary file
 * random-file -- choose N random files in CWD
+* random-string -- use `openssl` to generate 32-bytes of random data than base64 encode it
 * size-sum -- add up the size of the files named in STDIN
 * zip-dir -- zip up a directory
 * slice -- print a subset of lines from STDIN like `head(1)` or `tail(1)`
@@ -90,6 +91,7 @@ System Administration / DevOps
 * vm-start -- manage virtual machines through "virsh" / libvirt
 * mdns-discover -- use `avahi-browse` to discover network services
 * expressvpn-virtmanager-workaround -- restart virtmanager networks after ExpressVPN disconnect
+* generate-random-password -- use `openssl` to generate a random password
 
 Certificates
 ===
