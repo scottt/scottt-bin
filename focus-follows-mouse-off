@@ -1,0 +1,19 @@
+#!/bin/bash
+
+focus-follows-mouse-off() {
+	# https://github.com/koekeishiya/yabai/wiki/Configuration
+	yabai -m config focus_follows_mouse off
+}
+
+focus-follows-mouse-on() {
+	yabai -m config focus_follows_mouse autofocus
+}
+
+program-name() {
+	basename $0
+}
+
+case "$(program-name)" in
+focus-follows-mouse-off) focus-follows-mouse-off ;;
+*) focus-follows-mouse-on ;;
+esac

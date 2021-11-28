@@ -17,11 +17,12 @@ C / C++
 * dwarf-analyze-gcc-switches -- analyze which files where compiled with what flags when `-grecord-gcc-switches` is used
 * elf-interp-dump -- show `.interp` section content of ELF files
 
-OSX / iOS
+macOS / OSX / iOS
 ===
 * otool-rpath -- print the RPATH from a Mach-O binary
 * otool-needed -- print the shared libraries and frameworks required by a Mach-O binary
 * otool-install-name -- print the INSTALL NAME of a shared library or framework (similar to a SONAME)
+* focus-follows-mouse{,off} -- turn focus-follows-mouse on/off using `yabai`
 
 Software Development
 ===
