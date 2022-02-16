@@ -93,6 +93,7 @@ System Administration / DevOps
 * mdns-discover -- use `avahi-browse` to discover network services
 * expressvpn-virtmanager-workaround -- restart virtmanager networks after ExpressVPN disconnect
 * generate-random-password -- use `openssl` to generate a random password
+* smbclient-browse -- browse available shares on an SMB host using `smbclient`
 
 Certificates
 ===

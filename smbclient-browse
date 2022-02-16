@@ -1,0 +1,7 @@
+#!/bin/sh
+
+# SYNOPSIS
+#
+# $ smbclient-browse //SAMBA-SERVER.local/
+
+smbclient -L "$@"
