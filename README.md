@@ -62,7 +62,6 @@ Command Line / Shell Scripting
 * range -- `range 1 10` prints 1 to 9 (similar to `seq(1)`)
 * dict-grep -- grep word in dictionary file
 * random-file -- choose N random files in CWD
-* random-string -- use `openssl` to generate 32-bytes of random data than base64 encode it
 * size-sum -- add up the size of the files named in STDIN
 * zip-dir -- zip up a directory
 * slice -- print a subset of lines from STDIN like `head(1)` or `tail(1)`
@@ -92,7 +91,8 @@ System Administration / DevOps
 * vm-start -- manage virtual machines through "virsh" / libvirt
 * mdns-discover -- use `avahi-browse` to discover network services
 * expressvpn-virtmanager-workaround -- restart virtmanager networks after ExpressVPN disconnect
-* generate-random-password -- use `openssl` to generate a random password
+* generate-random{,-password} -- use `openssl` to generate a random password
+* generate-ed25519-keypair -- use `openssl` to generate a ed25519 keypair
 * smbclient-browse -- browse available shares on an SMB host using `smbclient`
 
 Certificates
@@ -140,6 +140,7 @@ Audio / Video Encoding and Conversion
 * sine-wave-save -- save a sine wave test sound pattern as a RAW or WAV file
 * video-extract-audio -- extract audio streams from video files for (rough, useful for
   music videos from YouTube)
+* video-to-gif -- convert video file to GIF
 * audio-transcode-for-google-music -- transcode audio files not support by Google Music to a
   suitable format.
 * mp4-faststart-optimize -- remux MP4 file into 'faststart' format for streaming using ffmpeg
@@ -155,10 +156,13 @@ Miscellaneous
 ===
 
 * imgs-to-pdf -- convert bitmap images to a multipage PDF
-* pdf-to-jpg -- convert PDF to JPEG
+* pdf-to-imgs -- convert PDF to multiple imgs. one file per page.
+* pdf-to-jpg -- convert single page PDF to JPEG
 * vector-to-png -- convert SVG to PNG
 * pdf-pages -- merge multiple pages from a source PDF into one
 * pdf-{add,remove}-password -- remove password from PDF (with qpdf)
+* pdf-remove-metadata -- remove Author, Title etc metadata from PDF file
+* svg-to-pdf -- use `linkescope` to convert SVG to PDF
 * gnome-recently-used-clear -- clear the recently used files list in GNOME
 * alarm -- play an alarm sound
 * xnest -- start a nested Xnest server through startx
