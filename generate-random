@@ -1,0 +1,28 @@
+#!/bin/bash
+
+generate-random-password() {
+	#    openssl rand [-base64] [-hex] [-out file] num
+	#    he rand command outputs num pseudo-random bytes.
+	N_BYTES=32
+	openssl rand -base64 $N_BYTES
+}
+
+generate-ed25519-keypair() {
+	case $# in
+	0) R="$RANDOM"; sk="ed25519-$R.pem"; pk="ed25519-$R.pub.pem" ;;
+	1) prefix=$1; sk="$prefix.pem"; pk="$prefix.pub.pem";;
+	*) printf 'usage: '"$(program-name)"' [KEY_NAME]\n'>&2; return 2 ;;
+	esac
+	openssl genpkey -algorithm ed25519 -out "$sk"
+	openssl pkey -in "$sk" -pubout -out "$pk"
+	echo $pk
+}
+
+program-name() {
+	echo $(basename $0)
+}
+
+case $(program-name) in
+generate-random-password) generate-random-password "$@" ;;
+generate-ed25519-keypair) generate-ed25519-keypair "$@" ;;
+esac
