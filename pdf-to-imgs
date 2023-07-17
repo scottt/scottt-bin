@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+
+# Convert PDF to images of individual pages
+# requires:
+# pdftoppm (from poppler)
+
+# https://jdhao.github.io/2019/11/14/convert_pdf_to_images_pdftoppm/
+
+import sys
+import os
+import subprocess
+import tempfile
+
+def print_usage_exit():
+    sys.stderr.write('%s PDF_FILE START_PAGE END_PAGE\n' %
+                     (program_name(),))
+    sys.exit(2)
+
+def program_name():
+    return os.path.basename(sys.argv[0])
+
+def main(args):
+    try:
+        (input_filename, start_page_str, end_page_str) = args
+    except ValueError:
+        print_usage_exit()
+
+    (out_filename_prefix, ext) = os.path.splitext(input_filename)
+    if ext.lower() != '.pdf':
+        sys.stderr.write("ERROR: input file \"%s\" doesn't end in .pdf\n" % (input_filename,))
+        print_usage_exit()
+
+    try:
+        (start_page, end_page) = (int(start_page_str), int(end_page_str))
+    except ValueError:
+        sys.stderr.write('ERROR: invalid start or end page number: %r, %r\n' % (start_page_str, end_page_str))
+        print_usage_exit()
+
+    for page in range(start_page, end_page+1):
+        page_str = '%d' % (page,)
+        subprocess.check_call(['pdftoppm', '-singlefile', '-r', '72', '-jpeg', 
+            '-jpegopt', 'quality=90',
+            '-f', page_str, input_filename, out_filename_prefix + '-%d' % (page,)])
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
