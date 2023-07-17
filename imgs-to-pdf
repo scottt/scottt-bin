@@ -24,7 +24,7 @@ def main(args):
 
     out_fname = args[-1]
     if os.path.splitext(out_fname)[1].lower() != '.pdf':
-        sys.stderr.write("ERROR: output file \"%s\" doesn't end in .pdf" % (out_fname,))
+        sys.stderr.write("ERROR: output file \"%s\" doesn't end in .pdf\n" % (out_fname,))
         print_usage_exit()
 
     temp_pdfs =  []
