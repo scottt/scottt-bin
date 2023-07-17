@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# SYNOPSYS: pdf-remove-metadata PDF
+
+case $# in
+1) PDF_FILE=$1 ;;
+*) printf 'usage: pdf-remove-metadata PDF\n'>&2; exit 2;;
+esac
+
+# https://unix.stackexchange.com/questions/608593/removing-metadata-from-a-pdf
+exiftool -all:all= $PDF_FILE
+# remove file extension: https://stackoverflow.com/questions/125281/how-do-i-remove-the-file-suffix-and-path-portion-from-a-path-string-in-bash
+qpdf --linearize $PDF_FILE ${PDF_FILE%.*}.metadata-removed.pdf
