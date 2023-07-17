@@ -1,12 +1,17 @@
 #!/bin/bash
 
+case $# in
+2) PDF_FILE=$1; JPG_FILE=$2;;
+*) printf 'usage: pdf-to-jpg PDF_FILE JPG_FILE\n'>&2; exit 2 ;;
+esac
+
 # https://stackoverflow.com/a/6605085/676030
 convert           \
    -verbose       \
    -density 150   \
    -trim          \
-   $1 \
+   "$PDF_FILE" \
    -quality 100   \
    -flatten       \
    -sharpen 0x1.0 \
-   $2
+   "$JPG_FILE"
