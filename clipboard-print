@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 import sys
 import os
@@ -37,7 +37,7 @@ def mac_clipboard_get_text():
 
 def mac_clipboard_set_text(text):
     p = subprocess.Popen(['pbcopy'], stdin=subprocess.PIPE)
-    p.stdin.write(text)
+    p.stdin.write(text.encode('utf-8'))
     p.stdin.close()
     r = p.wait()
     if r != 0:
@@ -128,6 +128,37 @@ def main(args):
     name_to_function = dict( (to_command_name(x.__name__), x)
                             for x in main_function_list )
     return name_to_function[program_name()](args)
+
+@main_function
+def clipboard_zh_tw_quote(args):
+    op = optparse.OptionParser()
+    (options, args) = op.parse_args(args)
+    t = clipboard_get_text('PRIMARY')
+    t = t.replace('「', '『')
+    t = t.replace('」', '』')
+
+    t = ''.join(['「' , t, '」'])
+    clipboard_set_text(t, 'CLIPBOARD')
+
+@main_function
+def clipboard_html_escape(args):
+
+    def print_usage_xit():
+        sys.stderr.write('usage: %s [FILE]\n' % (program_name(),))
+        sys.exit(2)
+
+    op = optparse.OptionParser()
+    (options, args) = op.parse_args(args)
+    if len(args) == 0:
+        t = clipboard_get_text('PRIMARY')
+    elif len(args) == 1:
+        t = open(args[0]).read()
+    else:
+        print_usage_exit()
+
+    if t:
+        t = cgi.escape(t)
+    clipboard_set_text(t, 'CLIPBOARD')
 
 if __name__ == '__main__':
     main(sys.argv[1:])
