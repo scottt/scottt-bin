@@ -58,9 +58,9 @@ def do_pdf_pages(filename, options):
         os.link(filename, 'input.pdf')
 
         pdfpages_options = dict( (k, bool_to_latex(v)) 
-                for (k, v) in options.__dict__.iteritems())
+                for (k, v) in options.__dict__.items())
         pdfpages_options['filename'] = 'input.pdf'
-        t = file('pdfpages.tex', 'w')
+        t = open('pdfpages.tex', 'w')
         t.write(TEMPLATE % pdfpages_options)
         t.close()
         if options.debug:
