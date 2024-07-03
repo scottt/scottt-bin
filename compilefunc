@@ -96,6 +96,7 @@ import errno
 import argparse
 import tempfile
 import logging
+from dataclasses import dataclass
 
 main_function_map = {}
 
@@ -116,6 +117,7 @@ def program_name():
     return os.path.basename(sys.argv[0])
 
 def gdb_batch(gdb_cmd, command_list):
+    # -> output_str
     gdb_input = tempfile.NamedTemporaryFile(mode='w+')
     gdb_input.write('\n'.join(command_list))
     gdb_input.seek(0)
@@ -147,7 +149,8 @@ def gdb_batch(gdb_cmd, command_list):
     out_file.seek(0)
     return out_file.read()
 
-def gdb_batch_disassemble(gdb_cmd, exe, functions, options):
+def gdb_prepare_disassemble_cmd(gdb_cmd, exe, options):
+    # -> (batch_cmds, dis_options)
     dis_options = ''
     if options.raw_instructions:
         dis_options += 'r'
@@ -159,17 +162,26 @@ def gdb_batch_disassemble(gdb_cmd, exe, functions, options):
     if dis_options:
         dis_options = '/' + dis_options
 
-    cmd = [
+    batch_cmds = [
         ('file %s' % (exe,)),
     ]
-    if getattr(options, 'demangle'):
-        cmd.append('set print asm-demangle')
+    if getattr(options, 'intel_syntax', None):
+        batch_cmds.append('set disassembly-flavor intel')
+    if getattr(options, 'demangle', None):
+        batch_cmds.append('set print asm-demangle')
+    if getattr(options, 'starti', None):
+        batch_cmds.append('starti')
+    return batch_cmds, dis_options
+
+def gdb_disassemble_functions(gdb_cmd, exe, functions, options):
+    # -> output_str
+    cmd, dis_options = gdb_prepare_disassemble_cmd(gdb_cmd, exe, options)
     for i in functions:
         if not options.no_special_symbol_quoting:
             #"printf@plt" -> "'printf@plt'"
             if i.endswith('@plt'):
                 i = "'%s'" % (i,)
-        cmd.append("disassemble %s %s" % (dis_options, i))
+        cmd.append('disassemble %s %s' % (dis_options, i))
     o = gdb_batch(gdb_cmd, cmd)
 
     if not options.no_header:
@@ -187,6 +199,13 @@ def gdb_batch_disassemble(gdb_cmd, exe, functions, options):
         out.append(o[start:end])
     return ''.join(out)
 
+def gdb_disassemble_range(gdb_cmd, exe, range_start, range_end, options):
+    # -> output_str
+    cmd, dis_options = gdb_prepare_disassemble_cmd(gdb_cmd, exe, options)
+    cmd.append('disassemble %s %s,%s' % (dis_options, range_start, range_end))
+    o = gdb_batch(gdb_cmd, cmd)
+    return o
+
 def gdb_command_name():
     cc = os.environ.get('CC', 'gcc')
     gdb = os.environ.get('GDB')
@@ -197,6 +216,17 @@ def gdb_command_name():
         except ValueError:
             gdb = 'gdb'
     return gdb
+
+def readelf_command_name():
+    cc = os.environ.get('CC', 'gcc')
+    readelf = os.environ.get('READELF')
+    if readelf is None:
+        # 'arm-linux-androideabi-gcc' -> 'arm-linux-androideabi-readelf'
+        try:
+            readelf = cc[:cc.rindex('-')+1]+'readelf'
+        except ValueError:
+            readelf = 'readelf'
+    return readelf
 
 @main_function
 def compilefunc(args):
@@ -250,11 +280,7 @@ def compilefunc(args):
     if o is not None:
         sys.stdout.write(o)
 
-@main_function
-def gdbdis(args):
-    ap = argparse.ArgumentParser(description='disassemble function from EXE')
-    ap.add_argument('executable', metavar='EXECUTABLE', help='executable file to disassemble')
-    ap.add_argument('functions', metavar='FUNCTION', nargs='+', help='function name or address to disassemble')
+def parser_add_disassemble_arguments(ap):
     ap.add_argument('-r', '--raw-instructions', action='store_true', help='show raw instruction opcodes')
     ap.add_argument('-s', '--source', action='store_true', help='include source lines'),
     ap.add_argument('-m', '--source-centric', action='store_true', help='include `disassemble /m` source lines'),
@@ -266,6 +292,17 @@ def gdbdis(args):
                     help='disable auto quoiting of symbols that ends with @plt')
     ap.add_argument('--demangle', action='store_true', default=False,
                     help='demangle C++ names in disassembly listings')
+    ap.add_argument('--intel-syntax', action='store_true', default=False,
+                    help='disassemble x86 instrucitons using Intel instead of AT&T syntax')
+    ap.add_argument('--starti', action='store_true', help='Start the debugged program stopping at the first instruction')
+    return ap
+
+@main_function
+def gdbdis(args):
+    ap = argparse.ArgumentParser(description='disassemble functions from EXE')
+    ap.add_argument('executable', metavar='EXECUTABLE', help='executable file to disassemble')
+    ap.add_argument('functions', metavar='FUNCTION', nargs='+', help='function name or address to disassemble')
+    parser_add_disassemble_arguments(ap)
     (args, unknown_args) = ap.parse_known_args(args)
 
     if len(args.functions) == 1:
@@ -273,11 +310,174 @@ def gdbdis(args):
 
     gdb = gdb_command_name()
     try:
-        o = gdb_batch_disassemble(gdb, args.executable, args.functions, args)
+        o = gdb_disassemble_functions(gdb, args.executable, args.functions, args)
     except ValueError as e:
         sys.stderr.write(e.message)
         sys.exit(3)
     sys.stdout.write(o)
+
+# functions that parse `readelf --program-headers --wide` output
+
+@dataclass
+class ElfSegment:
+    '''`readelf --program-header` data for an ELF segment'''
+    type: str
+    offset: int
+    virt_addr: int
+    phys_addr: int
+    file_size: int
+    mem_size: int
+    flag: set
+    align: int
+
+def program_header_load_line_parse(line):
+    f = line.split()
+    # Handle 'RW', 'R E' etc in the Flg field
+    flag_str = ''.join(x for x in f[6:-1]) # start after MemSiz exclude Align
+    return ElfSegment(type=f[0],
+                   offset=int(f[1], base=16),
+                   virt_addr=int(f[2], base=16),
+                   phys_addr=int(f[3], base=16), 
+                   file_size=int(f[4], base=16), 
+                   mem_size=int(f[5], base=16), 
+                   flag=set(flag_str),
+                   align=int(f[-1], base=16))
+
+def program_headers_parse_executable_segment_file_size(lines):
+    sample = '''Program Headers:
+      Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+      PHDR           0x000040 0x0000000000000040 0x0000000000000040 0x0002d8 0x0002d8 R   0x8
+      INTERP         0x000318 0x0000000000000318 0x0000000000000318 0x00001c 0x00001c R   0x1
+          [Requesting program interpreter: /lib64/ld-linux-x86-64.so.2]
+      LOAD           0x000000 0x0000000000000000 0x0000000000000000 0x001040 0x001040 R   0x1000
+      LOAD           0x002000 0x0000000000002000 0x0000000000002000 0x002c51 0x002c51 R E 0x1000'''
+    #lines = sample.split('\n')
+    segment = None
+    for line in lines:
+        #print('line: %r' % (line,))
+        if not line.strip().startswith('LOAD '):
+            continue
+        segment = program_header_load_line_parse(line)
+        if 'E' in segment.flag:
+            break
+    if segment is None:
+        raise ValueError('executable segment not found')
+    #assert(segment.file_size == 0x002c51)
+    #assert(segment.flag == set('re'))
+    return segment.file_size 
+
+def executable_segment_size(exe_path):
+    readelf = subprocess.run([readelf_command_name(), '--program-headers', '--wide', exe_path], capture_output=True, check=True,
+                            text=True, encoding='ascii')
+    size = program_headers_parse_executable_segment_file_size(readelf.stdout.split('\n'))
+    return size
+
+@dataclass
+class ProcMapping:
+    '''data from GDB's `info proc mappigns` output'''
+    start_addr: int
+    end_addr: int
+    size: int
+    offset: int
+    perms: set
+    objfile: str
+
+def info_proc_mappings_executable_segment_start(lines):
+    sample = '''(gdb) info proc mappings 
+    process 2182810
+    Mapped address spaces:
+
+              Start Addr           End Addr       Size     Offset  Perms  objfile
+          0x555555554000     0x555555555000     0x1000        0x0  r--p   /home/scottt/work/pwn.college/babyrev.2022fall/babyrev_level16.0
+          0x555555555000     0x555555557000     0x2000     0x1000  r-xp   /home/scottt/work/pwn.college/babyrev.2022fall/babyrev_level16.0
+          0x555555557000     0x555555558000     0x1000     0x3000  r--p   /home/scottt/work/pwn.college/babyrev.2022fall/babyrev_level16.0
+          0x555555558000     0x55555555a000     0x2000     0x3000  rw-p   /home/scottt/work/pwn.college/babyrev.2022fall/babyrev_level16.0
+          0x7ffff7fc0000     0x7ffff7fc4000     0x4000        0x0  r--p   [vvar]
+          0x7ffff7fc4000     0x7ffff7fc6000     0x2000        0x0  r-xp   [vdso]
+          0x7ffff7fc6000     0x7ffff7fc8000     0x2000        0x0  r--p   /usr/lib64/ld-linux-x86-64.so.2
+          0x7ffff7fc8000     0x7ffff7fef000    0x27000     0x2000  r-xp   /usr/lib64/ld-linux-x86-64.so.2
+          0x7ffff7fef000     0x7ffff7ffa000     0xb000    0x29000  r--p   /usr/lib64/ld-linux-x86-64.so.2
+          0x7ffff7ffb000     0x7ffff7fff000     0x4000    0x34000  rw-p   /usr/lib64/ld-linux-x86-64.so.2
+          0x7ffffffdc000     0x7ffffffff000    0x23000        0x0  rw-p   [stack]
+      0xffffffffff600000 0xffffffffff601000     0x1000        0x0  --xp   [vsyscall]'''
+    #lines = sample.split('\n')
+    for line in lines:
+        f = line.split()
+        #print('info_proc_mappings: f: %r' % (f,))
+        if len(f) != 6:
+          continue
+        try:
+          start_addr = int(f[0], base=16)
+          end_addr = int(f[1], base=16)
+        except ValueError:           
+            continue
+        #print('start_addr: 0x%x' % (start_addr,))
+        # perms: handle `rw-p` where '-' is for missing permissions and 'p' I assume just marks the end
+        perms = set(f[4])
+        try:
+            perms.remove('-')
+            perms.remove('p')
+        except KeyError:
+            pass
+        m = ProcMapping(start_addr=start_addr,
+                           end_addr=end_addr,
+                           size=int(f[2], base=16),
+                           offset=int(f[3], base=16),
+                           perms=perms,
+                           objfile=f[5])
+        if 'x' in m.perms:
+            #assert(m.start_addr == 0x555555555000)
+            #assert(m.perms == set('rx'))
+            return m.start_addr
+    else:
+        raise ValueError('executable segment not found')
+
+def gdb_executable_segment_start(gdb_cmd, options):
+    # Requirement: work on stripped PIEs, thus using `starti` instead of `start` etc
+    cmd = [ 'file %s' % (options.executable,),
+           'starti',
+           'info proc mappings'
+    ]
+    o = gdb_batch(gdb_cmd, cmd)
+    return info_proc_mappings_executable_segment_start(o.split('\n'))
+
+@main_function
+def gdbdis_exe(args):
+    # BUG: garbage output from `starti`: `Program stopped.` and  `... in _start() from /lib64/...`
+    #
+    #$ gdbdis-exe --intel-syntax /bin/true 2>/dev/null | head
+    #Program stopped.
+    #0x00007ffff7fe3d10 in _start () from /lib64/ld-linux-x86-64.so.2
+    #Dump of assembler code from 0x555555556000 to 0x555555558c51:
+    #   0x0000555555556000 <_init+0>:	endbr64
+    #   0x0000555555556004 <_init+4>:	sub    rsp,0x8
+    #   0x0000555555556008 <_init+8>:	mov    rax,QWORD PTR [rip+0x5fc1]        # 0x55555555bfd0
+    #   0x000055555555600f <_init+15>:	test   rax,rax
+    #   0x0000555555556012 <_init+18>:	je     0x555555556016 <_init+22>
+    #   0x0000555555556014 <_init+20>:	call   rax
+
+    ap = argparse.ArgumentParser(description='disassemble executable segment from EXE')
+    ap.add_argument('executable', metavar='EXECUTABLE', help='executable file to disassemble')
+    parser_add_disassemble_arguments(ap)
+    (args, unknown_args) = ap.parse_known_args(args)
+    args.starti = True
+    gdb = gdb_command_name()
+    # TODO: don't load exe into gdb twice just to find the executable segment load address for PIEs
+    range_start = gdb_executable_segment_start(gdb, args)
+    range_end = '+0x%x' % (executable_segment_size(args.executable),)
+
+    try:
+        o = gdb_disassemble_range(gdb, args.executable, range_start, range_end, args)
+    except ValueError as e:
+        msg = getattr(e, 'message', None)
+        if msg is None:
+            msg = str(e)
+        sys.stderr.write(msg)
+        sys.exit(3)
+    try:
+        sys.stdout.write(o)
+    except BrokenPipeError:
+        pass
 
 @main_function
 def gdbx(args):
