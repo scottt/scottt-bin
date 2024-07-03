@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 
+usage_msg = (
+'''
+usage: rsync-eta [OPTIONS] TO-CHK-STRING
+Synopsis:
+$ rsync-eta --start-time '2011-01-02 10:12+0300' ir-chk=1234/5678
+$ rsync-eta --start-time '2022-03-04 08:01-0400' to-chk=1234/5678
+''')
+
 import sys
 import argparse
 import datetime
@@ -18,7 +26,7 @@ def rsync_to_check_str_parse(s):
 def main(args):
     now = datetime.datetime.now(dateutil.tz.tzlocal())
     
-    parser = argparse.ArgumentParser(description='estimate rsync transfer time')
+    parser = argparse.ArgumentParser(description='estimate rsync transfer time', usage=usage_msg)
     parser.add_argument('--start-time', default='2024-07-03T18:24+0800', help='transfer start time')
     parser.add_argument('to_chk', help='rsync ir-chk or to-chk string e.g. ir-chk=1/23')
     options = parser.parse_args(args)

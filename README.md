@@ -94,6 +94,7 @@ System Administration / DevOps
 * generate-random{,-password} -- use `openssl` to generate a random password
 * generate-ed25519-keypair -- use `openssl` to generate a ed25519 keypair
 * smbclient-browse -- browse available shares on an SMB host using `smbclient`
+* rsync-eta -- estimate time left for rsync transfer
 
 Certificates
 ===
