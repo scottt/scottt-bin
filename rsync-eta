@@ -6,6 +6,8 @@ usage: rsync-eta [OPTIONS] TO-CHK-STRING
 Synopsis:
 $ rsync-eta --start-time '2011-01-02 10:12+0300' ir-chk=1234/5678
 $ rsync-eta --start-time '2022-03-04 08:01-0400' to-chk=1234/5678
+
+Using `rsync --no-inc-recursive` will produce better estimates since rsync traverses the whole directory structure first
 ''')
 
 import sys
