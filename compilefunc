@@ -234,15 +234,7 @@ def compilefunc(args):
     ap.add_argument('source_file', metavar='SOURCE-FILE', help='C or C++ source file')
     ap.add_argument('functions', metavar='FUNCTION', nargs='+', help='function to generate asm for')
     ap.add_argument('-l', '--do-link', action='store_true', help='link and not just compile the code')
-    ap.add_argument('-s', '--source', action='store_true', help='generate mixed source and asm output')
-    ap.add_argument('-r', '--raw-instructions', action='store_true',
-                    help='show instruction encodings in hex next to asm')
-    ap.add_argument('--no-header', action='store_true', 
-                        help="don't show \"Dump of ...\" headers and footers even when disassembling multiple functions")
-    ap.add_argument('--no-special-symbol-quoting', action='store_true', default=False,
-                    help='disable auto quoiting of symbols that ends with @plt')
-    ap.add_argument('--demangle', action='store_true', default=False,
-                    help='demangle C++ names in disassembly listings')
+    parser_add_disassemble_arguments(ap)
     (args, unknown_args) = ap.parse_known_args(args)
     if len(args.functions) < 2:
         args.no_header = True
@@ -272,7 +264,7 @@ def compilefunc(args):
         r = subprocess.call(cmd)
         if r == 0:
             try:
-                o = gdb_batch_disassemble(gdb, fout, args.functions, args)
+                o = gdb_disassemble_functions(gdb, fout, args.functions, args)
             except ValueError:
                 sys.exit(3)
     finally:
