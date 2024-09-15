@@ -304,7 +304,7 @@ def gdbdis(args):
     try:
         o = gdb_disassemble_functions(gdb, args.executable, args.functions, args)
     except ValueError as e:
-        sys.stderr.write(e.message)
+        sys.stderr.write(str(e))
         sys.exit(3)
     sys.stdout.write(o)
 
