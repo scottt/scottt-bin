@@ -33,6 +33,7 @@ Software Development
 * http-static-server -- HTTP server that serves static content in CWD
 * git-clean -- delete files not tracked by git
 * git-config-credential-libsecret -- use libsecret as the Git credentil helper
+* git-repo-sign-withssh -- configure git to sign commits with SSH keys for a repo
 
 Python
 ===

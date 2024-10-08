@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+import subprocess
+
+def run(cmd_args):
+    sys.stderr.write('%r\n' % cmd_args)
+    subprocess.check_call(cmd_args)
+
+def run_stdout(cmd_args):
+    p = subprocess.run(cmd_args, capture_output=True, encoding='utf8', check=True)
+    return p.stdout
+
+def program_name():
+    return os.path.basename(sys.argv[0])
+
+def main(args):
+    n = program_name()
+
+    signing_key = run_stdout(['git', 'config', '--local', 'user.signingkey'])
+    if not signing_key.strip():
+        signing_key = run_stdout(['git', 'config', '--local', 'user.signingkey', '~/.ssh/id_ed25519-scottt.tw-2023.pub'])
+
+    run(['git', 'config', 'commit.gpgsign', 'true'])
+    run(['git', 'config', 'gpg.format', 'ssh'])
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
