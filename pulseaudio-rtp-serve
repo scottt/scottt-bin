@@ -1,5 +1,44 @@
 #!/usr/bin/env python
 
+import sys
+import os
+import subprocess
+import optparse
+
+main_function_map = {}
+
+def main_function(func):
+    global main_function_map
+    main_function_map[func.__name__.replace('_','-')] = func
+    return func
+
+# Stream computer speaker output to "Simple Protocol Player" app on Android
+# also work on Pipewire
+# 
+# $ ./pulseaudio-simple-serve
+#
+# https://gitlab.freedesktop.org/pipewire/pipewire/-/wikis/Config-PulseAudio#module-simple-protocol-tcp
+# https://docs.pipewire.org/page_module_protocol_simple.html
+# https://gitlab.freedesktop.org/pipewire/pipewire/-/issues/2068
+@main_function
+def pulseaudio_simple_serve(args):
+    p = optparse.OptionParser(option_list=[
+        optparse.Option('--format', default='s16le', help='PCM format'),
+        optparse.Option('--channels', default=2, type=int, help='# of PCM channels'),
+        optparse.Option('--rate', default=44100, type=int, help='PCM sample rate'),
+        optparse.Option('--port', default=5555, type=int, help='Multicast port'),
+    ])
+    (options, args) = p.parse_args(args)
+
+    dev_null = open('/dev/null', 'w')
+    subprocess.check_call(['pactl', 'load-module', 'module-simple-protocol-tcp',
+                           'format=' + options.format,
+                           'channels=%d' % (options.channels,),
+                           'rate=%d' % (options.rate,),
+                           'record=true',
+                           'port=%d' % (options.port,),
+                          ])#, stdout=dev_null)
+
 '''
 Instruct Pulseaudio module-rtp-send to read from the 'rtp' source and multicast
 Data Flow
@@ -8,13 +47,8 @@ else:   pulseaudio (PCM) -> RTP Multicast on (host, port) specified
 
 http://www.freedesktop.org/wiki/Software/PulseAudio/Documentation/User/Network/RTP
 '''
-
-import sys
-import os
-import subprocess
-import optparse
-
-def main(args):
+@main_function
+def pulseaudio_rtp_serve(args):
     p = optparse.OptionParser(option_list=[
         optparse.Option('--mp3', action='store_true', help='Stream MP3 format. Requires "cvlc" to transcode and adds latency.'),
         optparse.Option('--format', default='s16be', help='PCM format'),
@@ -61,5 +95,16 @@ def main(args):
                                % dict(channels=options.channels, host=options.host, port=options.port)),
                               ])
 
+def program_name():
+    return os.path.basename(sys.argv[0])
+
+def main_function_dispatch(name, args):
+    try:
+        f = main_function_map[name]
+    except KeyError:
+        sys.stderr.write('%s is not a valid command name\n' % (name,))
+        sys.exit(2)
+    f(args)
+
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main_function_dispatch(program_name(), sys.argv[1:])
