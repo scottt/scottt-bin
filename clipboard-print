@@ -43,6 +43,38 @@ def mac_clipboard_set_text(text):
     if r != 0:
         raise RuntimeError('pbcopy returned ' + str(r))
 
+def wl_clipboard_get_text(selection):
+    args = ['--no-newline']
+    if selection == 'PRIMARY':
+        args.append('--primary')
+    with tempfile.TemporaryFile(mode='w+') as tf:
+        subprocess.check_call(['wl-paste'] + args, stdout=tf)
+        tf.seek(0)
+        return tf.read()
+
+def wl_clipboard_set_text(text, selection):
+    args = ['--foreground']
+    if selection == 'PRIMARY':
+        args.append('--primary')
+    p = subprocess.Popen(['wl-copy'], stdin=subprocess.PIPE)
+    p.stdin.write(text.encode('utf-8'))
+    p.stdin.close()
+    r = p.wait()
+    if r != 0:
+        raise RuntimeError('wl-copy returned ' + str(r))
+
+def external_command_clipboard_set_text(text, selection):
+    try:
+        return mac_clipboard_set_text(text)
+    except FileNotFoundError:
+        return wl_clipboard_set_text(text, selection)
+
+def external_command_clipboard_get_text(selection):
+    try:
+        return mac_clipboard_get_text()
+    except FileNotFoundError:
+        return wl_clipboard_get_text(selection)
+
 def gtk_clipboard_get_text(selection):
     'return textual data from the X11 clipboard. @selection should be "PRIMARY" or "CLIPBOARD"'
     clipboard = gtk.Clipboard(selection=selection)
@@ -56,13 +88,13 @@ def gtk_clipboard_set_text(text, selection):
 
 def clipboard_get_text(selection):
     if gtk is None:
-        return mac_clipboard_get_text()
+        return external_command_clipboard_get_text(selection)
     else:
         return gtk_clipboard_get_text(selection)
 
 def clipboard_set_text(text, selection):
     if gtk is None:
-        return mac_clipboard_set_text(text)
+        return external_command_clipboard_set_text(text, selection)
     else:
         return gtk_clipboard_set_text(text, selection)
 
