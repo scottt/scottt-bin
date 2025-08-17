@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# Synopsis
+# $ single-pixel-png 405140 out.png
+
+# Use an online color picker or `flatpack run nl.hjdskes.gcolor3` to
+# get the background color
+
+case $# in
+2) color=$1; FILE=$2;;
+*) printf 'usage: single-pixel-png COLOR FILE\n'>&2 ; exit 2;;
+esac
+
+if [[ "$color" != "#"* ]]; then
+	color=#"$color"	
+fi
+magick -size 1x1 xc:"$color" "$FILE"
