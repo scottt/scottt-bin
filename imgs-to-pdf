@@ -30,7 +30,7 @@ def main(args):
     temp_pdfs =  []
     for i in args[:-1]:
         (tfd, tfname) = tempfile.mkstemp(suffix='.pdf')
-        subprocess.check_call(['convert', i, tfname])
+        subprocess.check_call(['magick', i, tfname])
         os.close(tfd)
         temp_pdfs.append(tfname)
 
